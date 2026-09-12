@@ -69,6 +69,7 @@
     modalBody: $('modalBody'),
     modalClose: $('modalClose'),
     toast: $('toast'),
+    fxCanvas: $('fxCanvas'),
 
     resultIcon: $('resultIcon'),
     resultTitle: $('resultTitle'),
@@ -135,7 +136,7 @@
     }
   }
 
-  function playTone(freq, duration, delay = 0, volume = 0.09) {
+  function playTone(freq, duration, delay = 0, volume = 0.09, type = 'sine', bendTo = null) {
     if (!audioEnabled) return;
     ensureAudio();
     if (!audioContext) return;
@@ -144,8 +145,12 @@
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
 
-    osc.type = 'sine';
+    osc.type = type;
     osc.frequency.setValueAtTime(freq, start);
+    if (bendTo) {
+      osc.frequency.exponentialRampToValueAtTime(bendTo, start + duration);
+    }
+
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
@@ -161,16 +166,110 @@
     playTone(880, 0.18, 0.12);
   }
 
+  // 勝利ファンファーレ：駆け上がり → ジャーン（和音）→ きらめき
   function playWinSound() {
-    playTone(523, 0.13, 0);
-    playTone(659, 0.13, 0.13);
-    playTone(784, 0.24, 0.26);
+    const C5 = 523.25, E5 = 659.25, G5 = 783.99, C6 = 1046.5, E6 = 1318.5, G6 = 1568;
+
+    [[C5, 0.00], [E5, 0.09], [G5, 0.18], [C6, 0.27]].forEach(([f, t]) => {
+      playTone(f, 0.16, t, 0.10, 'triangle');
+    });
+
+    playTone(G5, 0.14, 0.40, 0.09, 'triangle');
+    playTone(C6, 0.90, 0.50, 0.11, 'triangle');
+
+    [C5, E5, G5, C6].forEach(f => playTone(f, 0.95, 0.50, 0.045, 'sine'));
+    playTone(261.63, 1.05, 0.50, 0.05, 'sine');
+
+    [[E6, 0.66], [G6, 0.78], [C6 * 2, 0.90]].forEach(([f, t]) => {
+      playTone(f, 0.22, t, 0.028, 'sine');
+    });
   }
 
+  // 敗北：力が抜けていくように下降し、最後は低音がしぼむ
   function playLoseSound() {
-    playTone(440, 0.15, 0);
-    playTone(349, 0.16, 0.15);
-    playTone(294, 0.25, 0.31);
+    [[392.00, 0.24, 0.00], [349.23, 0.24, 0.22], [311.13, 0.28, 0.44]].forEach(
+      ([f, d, t]) => playTone(f, d, t, 0.09, 'triangle')
+    );
+
+    playTone(293.66, 0.95, 0.70, 0.09, 'triangle', 196.00);
+    playTone(146.83, 1.10, 0.70, 0.06, 'sine', 98.00);
+  }
+
+  /* =========================
+     勝敗の演出（紙吹雪）
+  ========================= */
+
+  let fxFrame = null;
+
+  function runConfetti(duration = 3200) {
+    const canvas = els.fxCanvas;
+    if (!canvas || !canvas.getContext) return;
+
+    if (fxFrame) cancelAnimationFrame(fxFrame);
+
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const W = (canvas.width = Math.floor(window.innerWidth * dpr));
+    const H = (canvas.height = Math.floor(window.innerHeight * dpr));
+
+    canvas.classList.remove('hidden');
+
+    const colors = ['#2fa46f', '#cf72b7', '#42a8c7', '#e05252', '#e59a35', '#f0d26f'];
+    const pieces = Array.from({ length: 130 }, () => ({
+      x: Math.random() * W,
+      y: -Math.random() * H * 0.5,
+      w: (5 + Math.random() * 7) * dpr,
+      h: (8 + Math.random() * 10) * dpr,
+      vx: (Math.random() - 0.5) * 1.8 * dpr,
+      vy: (1.5 + Math.random() * 2.8) * dpr,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.25,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    }));
+
+    const start = performance.now();
+
+    const frame = now => {
+      const elapsed = now - start;
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalAlpha = elapsed > duration - 800 ? Math.max(0, (duration - elapsed) / 800) : 1;
+
+      pieces.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+
+        if (p.y > H + 40 * dpr) {
+          p.y = -20 * dpr;
+          p.x = Math.random() * W;
+        }
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+
+      ctx.globalAlpha = 1;
+
+      if (elapsed < duration) {
+        fxFrame = requestAnimationFrame(frame);
+      } else {
+        ctx.clearRect(0, 0, W, H);
+        canvas.classList.add('hidden');
+        fxFrame = null;
+      }
+    };
+
+    fxFrame = requestAnimationFrame(frame);
+  }
+
+  function stopConfetti() {
+    if (fxFrame) cancelAnimationFrame(fxFrame);
+    fxFrame = null;
+    if (els.fxCanvas) els.fxCanvas.classList.add('hidden');
   }
 
   function toggleSound() {
@@ -894,12 +993,14 @@
       playTurnSound();
     }
 
+    // 決着の瞬間だけ、音と演出を一度だけ出す。
     if (
       previousStatus === 'playing' &&
       room.status === 'finished'
     ) {
       if (room.winner === meIndex) {
         playWinSound();
+        runConfetti();
       } else {
         playLoseSound();
       }
@@ -941,12 +1042,12 @@
 
     stacks.forEach(list => list.sort((a, b) => a.tile - b.tile));
 
-    // 立てたコマと寝かせたコマで高さが違うので、下のコマの数字が隠れない分だけ
+    // 立てたコマと寝かせたコマで高さが違うので、下のコマの数字が完全に見える分だけ
     // ずらして積む。レーンの高さは一番高い山に合わせる。
     const upHeight = compact ? 29 : 34;
     const sideHeight = compact ? 22 : 26;
-    const upStep = compact ? 18 : 22;
-    const sideStep = compact ? 15 : 18;
+    const upStep = compact ? 25 : 30;
+    const sideStep = compact ? 19 : 23;
     const isSideways = clue => clue.type === 'compare' && !clue.yes;
 
     let laneHeight = compact ? 32 : 38;
@@ -1641,7 +1742,10 @@
     const winnerName = room.players[room.winner]?.name || 'プレイヤー';
     const lastGuess = room.guesses?.[room.guesses.length - 1] || null;
 
-    els.resultIcon.textContent = won ? '★' : '×';
+    els.result.classList.toggle('celebrate', won);
+    els.result.classList.toggle('defeat', !won);
+
+    els.resultIcon.textContent = won ? '🏆' : '×';
     els.resultTitle.textContent = won ? '勝利！' : `${winnerName} の勝利`;
 
     if (lastGuess?.correct) {
@@ -2101,6 +2205,8 @@
   ========================= */
 
   async function rematch() {
+    stopConfetti();
+
     if (room.mode === 'cpu2') {
       const next = setupGame(structuredClone(room));
 
@@ -2128,6 +2234,7 @@
 
   function clearSession() {
     clearTimeout(cpuTimer);
+    stopConfetti();
 
     if (channel && sb) {
       sb.removeChannel(channel);

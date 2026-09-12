@@ -62,7 +62,7 @@ window.SUPABASE_ANON_KEY = "sb_publishable_xxxxxxxxxxxxxxxx";
 います。
 
 **更新のたびに `index.html` 内の `?v=N` を上げてください**
-(`styles.css?v=8`, `app.js?v=8` など)。バージョン文字列を変えないと、
+(`styles.css?v=9`, `app.js?v=9` など)。バージョン文字列を変えないと、
 一部のブラウザ/キャリアのキャッシュで古いJSが読み込まれ続けることがあります。
 
 ## モードについて
