@@ -7,14 +7,14 @@
   <title>FIVE LOGIC</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2317131f'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23f0d26f' font-family='sans-serif' font-weight='900'%3E5%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=10">
+  <link rel="stylesheet" href="./styles.css?v=11">
 </head>
 <body>
 <div id="app">
   <header class="topbar">
     <div>
       <div class="brand">FIVE LOGIC</div>
-      <div class="sub">2人対戦 / CPU戦 / 3人戦</div>
+      <div class="sub">CPU戦 / オンライン対戦(最大4人)</div>
     </div>
 
     <div class="top-actions">
@@ -27,12 +27,12 @@
     <section id="setupScreen" class="screen">
       <div class="hero">
         <h1>どう遊ぶ？</h1>
-        <p>1人でCPU戦、友だちと2人対戦、または「人間2人＋CPU」の3人戦ができます。</p>
+        <p>1人でCPU戦(CPU最大3体)、友だちとオンライン対戦(最大4人・CPU混在も可)ができます。</p>
       </div>
 
       <div id="configWarning" class="notice warning hidden">
         <strong>Supabase未設定です。</strong>
-        <span>CPU戦は遊べます。2人対戦・3人戦には、今まで使っている config.js が必要です。</span>
+        <span>CPU戦は遊べます。オンライン対戦には、今まで使っている config.js が必要です。</span>
       </div>
 
       <div class="setup-grid">
@@ -40,6 +40,14 @@
           <h2>CPU戦</h2>
           <label>あなたの名前</label>
           <input id="cpuPlayerName" maxlength="16" placeholder="例：けん">
+
+          <label>CPUの人数</label>
+          <div id="cpuCountPicker" class="count-picker">
+            <button type="button" data-value="1" class="count-btn active">1体</button>
+            <button type="button" data-value="2" class="count-btn">2体</button>
+            <button type="button" data-value="3" class="count-btn">3体</button>
+          </div>
+
           <button id="cpuStartBtn" class="primary">CPUと対戦する</button>
         </div>
 
@@ -49,8 +57,18 @@
           <label>部屋を作る人の名前</label>
           <input id="hostName" maxlength="16" placeholder="例：けん">
 
-          <button id="createBtn" class="secondary full">2人対戦の部屋を作る</button>
-          <button id="create3Btn" class="primary alt-primary">3人戦（人間2＋CPU）を作る</button>
+          <label>合計人数</label>
+          <div id="totalPlayerPicker" class="count-picker">
+            <button type="button" data-value="2" class="count-btn active">2人</button>
+            <button type="button" data-value="3" class="count-btn">3人</button>
+            <button type="button" data-value="4" class="count-btn">4人</button>
+          </div>
+
+          <label>そのうちCPUの人数</label>
+          <div id="onlineCpuPicker" class="count-picker"></div>
+          <p class="small" id="onlineComposeHint"></p>
+
+          <button id="createOnlineBtn" class="primary alt-primary">この設定で部屋を作る</button>
 
           <div class="divider">部屋に参加する</div>
 
@@ -164,6 +182,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=10"></script>
+<script src="./app.js?v=11"></script>
 </body>
 </html>

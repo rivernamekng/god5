@@ -27,12 +27,15 @@
 
     cpuPlayerName: $('cpuPlayerName'),
     cpuStart: $('cpuStartBtn'),
+    cpuCountPicker: $('cpuCountPicker'),
 
     hostName: $('hostName'),
     guestName: $('guestName'),
     roomInput: $('roomCodeInput'),
-    create2: $('createBtn'),
-    create3: $('create3Btn'),
+    totalPlayerPicker: $('totalPlayerPicker'),
+    onlineCpuPicker: $('onlineCpuPicker'),
+    onlineComposeHint: $('onlineComposeHint'),
+    createOnline: $('createOnlineBtn'),
     join: $('joinBtn'),
 
     roomCodeBig: $('roomCodeBig'),
@@ -396,10 +399,14 @@
 
   function normalizeSession() {
     if (!session) return;
-    if (session.mode === 'cpu') session.mode = 'cpu2';
-    if (session.mode === 'online') session.mode = 'online2';
+    if (session.mode === 'cpu' || session.mode === 'cpu2') session.mode = 'local';
+    if (session.mode === 'online' || session.mode === 'online2' || session.mode === 'online3cpu') {
+      session.mode = 'online';
+    }
   }
 
+  // 旧形式(cpu2/online2/online3cpu、CPUは1体のみ)から、
+  // 新形式(local/online、CPUは0〜3体まで cpuIndexes配列で保持)へ変換する。
   function normalizeRoom(state) {
     if (!state) return state;
 
@@ -419,14 +426,22 @@
     }
 
     if (state.mode === 'cpu2') {
-      state.cpuIndex = 1;
-      state.playerCount = 2;
+      state.mode = 'local';
+      state.cpuIndexes = [1];
     } else if (state.mode === 'online3cpu') {
-      state.cpuIndex = 2;
-      state.playerCount = 3;
-    } else {
-      state.cpuIndex = null;
-      state.playerCount = 2;
+      state.mode = 'online';
+      state.cpuIndexes = [2];
+    } else if (state.mode === 'online2') {
+      state.mode = 'online';
+      state.cpuIndexes = [];
+    }
+
+    if (!Array.isArray(state.cpuIndexes)) {
+      state.cpuIndexes = typeof state.cpuIndex === 'number' ? [state.cpuIndex] : [];
+    }
+
+    if (typeof state.playerCount !== 'number') {
+      state.playerCount = state.players.length;
     }
 
     return state;
@@ -474,22 +489,20 @@
 
   function humanIndex() {
     if (!session) return 0;
-    if (session.mode === 'cpu2') return 0;
+    if (session.mode === 'local') return 0;
     return session.playerIndex ?? 0;
   }
 
-  function cpuIndex() {
-    return room?.cpuIndex ?? null;
-  }
-
   function isLocalMode() {
-    return room?.mode === 'cpu2' || session?.mode === 'cpu2';
+    return room?.mode === 'local' || session?.mode === 'local';
   }
 
+  // CPUの操作(推理・行動選択)は、何体いても必ずホスト側(またはlocalモードの本人)の
+  // ブラウザ1つだけが担当する。二重行動を防ぐための唯一の判定箇所。
   function isCpuController() {
-    if (!room || cpuIndex() === null) return false;
-    if (room.mode === 'cpu2') return true;
-    if (room.mode === 'online3cpu') return session?.playerIndex === 0;
+    if (!room || !room.cpuIndexes || room.cpuIndexes.length === 0) return false;
+    if (room.mode === 'local') return true;
+    if (room.mode === 'online') return session?.playerIndex === 0;
     return false;
   }
 
@@ -524,8 +537,7 @@
   }
 
   function displayModeName() {
-    if (room.mode === 'cpu2') return 'CPU BATTLE';
-    if (room.mode === 'online3cpu') return '3 PLAYER';
+    if (room.mode === 'local') return 'CPU BATTLE';
     return `ROOM ${session.code}`;
   }
 
@@ -533,51 +545,36 @@
      Room / setup
   ========================= */
 
-  function buildInitialState(hostName, hostToken, mode) {
-    if (mode === 'online3cpu') {
-      return {
-        version: 3,
-        mode,
-        playerCount: 3,
-        cpuIndex: 2,
-        status: 'waiting',
-        turn: 0,
-        phase: 'draw',
-        winner: null,
-        revision: 0,
-        players: [
-          { name: hostName, token: hostToken, hand: [], eliminated: false },
-          null,
-          { name: 'CPU', token: 'cpu', hand: [], eliminated: false },
-        ],
-        remaining: TILE_MAP.map(t => t.n),
-        public: [],
-        clues: [],
-        guesses: [],
-        round: 1,
-        createdAt: new Date().toISOString(),
-      };
+  // totalPlayers: 2〜4人。cpuCount: そのうちCPUの人数(0〜totalPlayers-1)。
+  // 残り(totalPlayers - 1 - cpuCount)人ぶんの空席を用意し、参加者を待つ。
+  // 空席が0なら(=host以外全員CPU)、その場で即開始する。
+  function buildInitialState(hostName, hostToken, mode, totalPlayers, cpuCount) {
+    const remainingSlots = totalPlayers - 1;
+    const humanSlotsNeeded = Math.max(0, remainingSlots - cpuCount);
+    const cpuIndexes = [];
+    const players = [{ name: hostName, token: hostToken, hand: [], eliminated: false }];
+
+    for (let i = 0; i < humanSlotsNeeded; i++) {
+      players.push(null);
+    }
+
+    for (let i = 0; i < cpuCount; i++) {
+      cpuIndexes.push(players.length);
+      const label = cpuCount > 1 ? `CPU${i + 1}` : 'CPU';
+      players.push({ name: label, token: 'cpu', hand: [], eliminated: false });
     }
 
     return {
-      version: 3,
+      version: 4,
       mode,
-      playerCount: 2,
-      cpuIndex: mode === 'cpu2' ? 1 : null,
-      status: mode === 'cpu2' ? 'playing' : 'waiting',
+      playerCount: totalPlayers,
+      cpuIndexes,
+      status: humanSlotsNeeded === 0 ? 'playing' : 'waiting',
       turn: 0,
       phase: 'draw',
       winner: null,
       revision: 0,
-      players: mode === 'cpu2'
-        ? [
-            { name: hostName, token: hostToken, hand: [], eliminated: false },
-            { name: 'CPU', token: 'cpu', hand: [], eliminated: false },
-          ]
-        : [
-            { name: hostName, token: hostToken, hand: [], eliminated: false },
-            null,
-          ],
+      players,
       remaining: TILE_MAP.map(t => t.n),
       public: [],
       clues: [],
@@ -727,18 +724,20 @@
     }
   }
 
-  function startCpuGame() {
+  // CPU戦(1台のみ、Supabase不要)。cpuCountは1〜3。
+  function startLocalGame(cpuCount) {
     ensureAudio();
 
     const name = els.cpuPlayerName.value.trim() || 'あなた';
     const token = randToken();
+    const totalPlayers = 1 + cpuCount;
 
-    let state = buildInitialState(name, token, 'cpu2');
+    let state = buildInitialState(name, token, 'local', totalPlayers, cpuCount);
     state = setupGame(state);
 
     session = {
-      mode: 'cpu2',
-      code: 'CPU',
+      mode: 'local',
+      code: 'LOCAL',
       token,
       playerIndex: 0,
     };
@@ -754,7 +753,9 @@
     render();
   }
 
-  async function createOnlineRoom(mode) {
+  // オンライン対戦の部屋を作る。totalPlayersは2〜4人、cpuCountは0〜totalPlayers-2
+  // (人間は必ず2人以上=host+最低1人の参加者が必要)。
+  async function createOnlineRoom(totalPlayers, cpuCount) {
     ensureAudio();
 
     if (!configured) {
@@ -775,7 +776,7 @@
 
     for (let i = 0; i < 10 && !created; i++) {
       code = randCode();
-      const state = buildInitialState(name, token, mode);
+      const state = buildInitialState(name, token, 'online', totalPlayers, cpuCount);
 
       const { error } = await sb
         .from('godfive_rooms')
@@ -790,7 +791,7 @@
     }
 
     session = {
-      mode,
+      mode: 'online',
       code,
       token,
       playerIndex: 0,
@@ -859,7 +860,11 @@
         eliminated: false,
       };
 
-      setupGame(state);
+      // 4人戦などで空席がまだ残っている場合は、全員揃うまで開始しない。
+      const stillWaiting = state.players.some(p => p === null);
+      if (!stillWaiting) {
+        setupGame(state);
+      }
 
       const prevRevision = row.revision || 0;
       state.revision = prevRevision + 1;
@@ -922,7 +927,7 @@
 
     normalizeSession();
 
-    if (session.mode === 'cpu2') {
+    if (session.mode === 'local') {
       room = normalizeRoom(
         JSON.parse(localStorage.getItem('fiveLogicCpuRoom') || 'null')
       );
@@ -1190,7 +1195,7 @@
       .filter(x => x.p && x.i !== meIndex);
 
     els.opponentsArea.innerHTML = opponents.map(({ p, i }) => {
-      const isCpu = i === cpuIndex();
+      const isCpu = room.cpuIndexes.includes(i);
       const stateClass = p.eliminated ? 'out' : isCpu ? 'cpu' : '';
       const stateText = p.eliminated ? '脱落' : isCpu ? 'CPU' : '対戦相手';
       const isTurn = !gameOver && room.status === 'playing' && room.turn === i;
@@ -1229,10 +1234,14 @@
     if (room.status === 'waiting') {
       show(els.waiting);
       els.roomCodeBig.textContent = session.code;
-      els.waitingText.textContent =
-        room.mode === 'online3cpu'
-          ? 'もう1人の参加を待っています。参加するとCPUを加えた3人戦が始まります。'
-          : '相手の参加を待っています…';
+
+      const remainingSeats = room.players.filter(p => p === null).length;
+      const cpuCount = room.cpuIndexes.length;
+
+      els.waitingText.textContent = cpuCount > 0
+        ? `あと${remainingSeats}人の参加を待っています(合計${room.playerCount}人・CPU${cpuCount}体は参加済み)`
+        : `あと${remainingSeats}人の参加を待っています…(合計${room.playerCount}人)`;
+
       return;
     }
 
@@ -1247,8 +1256,8 @@
       room.turn === meIndex;
 
     els.roomMini.textContent =
-      room.mode === 'online3cpu'
-        ? `3 PLAYER / ROOM ${session.code}`
+      room.mode === 'online'
+        ? `${room.playerCount}人戦 / ROOM ${session.code}`
         : displayModeName();
 
     els.meBadge.textContent =
@@ -1266,10 +1275,9 @@
 
     } else {
       const current = room.players[room.turn];
-      els.turnText.textContent =
-        room.turn === cpuIndex()
-          ? 'CPUが考えています…'
-          : `${current?.name || '相手'} の番です`;
+      els.turnText.textContent = room.cpuIndexes.includes(room.turn)
+        ? `${current?.name || 'CPU'}が考えています…`
+        : `${current?.name || '相手'} の番です`;
     }
 
     // 極めて稀なケースだが、全色の山が尽きた場合に「引く」段階のまま
@@ -1413,10 +1421,10 @@
     els.myHand.classList.toggle('choosing', canClue && compareMode);
 
     if (!myTurn) {
-      els.phaseText.textContent =
-        room.turn === cpuIndex()
-          ? 'CPUの操作中'
-          : '相手の操作待ち';
+      const current = room.players[room.turn];
+      els.phaseText.textContent = room.cpuIndexes.includes(room.turn)
+        ? `${current?.name || 'CPU'}が操作中`
+        : '相手の操作待ち';
     } else if (canDraw) {
       els.phaseText.textContent = '① 山から1枚めくる';
     } else if (compareMode) {
@@ -1835,8 +1843,9 @@
      CPU deduction
   ========================= */
 
-  function visibleNumbersForCpu() {
-    const ci = cpuIndex();
+  // ci: 今、手番のCPUのプレイヤーindex。複数のCPUがいても、この関数群は
+  // 常に「今動いている1体」だけを対象に、公開情報のみから候補を絞り込む。
+  function visibleNumbersForCpu(ci) {
     const visible = new Set();
 
     room.players.forEach((p, i) => {
@@ -1850,9 +1859,8 @@
     return visible;
   }
 
-  function baseCandidatesByPosition() {
-    const ci = cpuIndex();
-    const visible = visibleNumbersForCpu();
+  function baseCandidatesByPosition(ci) {
+    const visible = visibleNumbersForCpu(ci);
 
     return room.players[ci].hand.map(actualN => {
       const color = tileByN(actualN).color;
@@ -1868,9 +1876,7 @@
     });
   }
 
-  function tupleMatchesCpuClues(tuple) {
-    const ci = cpuIndex();
-
+  function tupleMatchesCpuClues(tuple, ci) {
     for (const clue of room.clues) {
       if (clue.by !== ci) continue;
 
@@ -1899,15 +1905,15 @@
     return true;
   }
 
-  function cpuCandidateTuples(useClues = true) {
-    const byPos = baseCandidatesByPosition();
+  function cpuCandidateTuples(ci, useClues = true) {
+    const byPos = baseCandidatesByPosition(ci);
     const tuples = [];
 
     function dfs(pos, current) {
       if (pos === 5) {
         if (
           !useClues ||
-          tupleMatchesCpuClues(current)
+          tupleMatchesCpuClues(current, ci)
         ) {
           tuples.push([...current]);
         }
@@ -2047,9 +2053,7 @@
     ];
   }
 
-  function chooseCpuDrawColor(tuples) {
-    const ci = cpuIndex();
-
+  function chooseCpuDrawColor(tuples, ci) {
     const available = COLORS.filter(c =>
       room.remaining.some(
         n => tileByN(n).color === c.key
@@ -2098,8 +2102,7 @@
     ].key;
   }
 
-  async function cpuDeclare(tuple) {
-    const ci = cpuIndex();
+  async function cpuDeclare(tuple, ci) {
     const next = structuredClone(room);
     const guess = [...tuple];
 
@@ -2137,16 +2140,17 @@
     await saveState(next, { scheduleCpu: false });
   }
 
+  // CPUが何体いても、次の手番がCPUの席であれば(誰であれ)スケジュールする。
+  // isCpuController()がホスト以外では常にfalseを返すため、二重実行は起きない。
   function maybeScheduleCpu() {
     clearTimeout(cpuTimer);
 
     if (
       !room ||
       room.status !== 'playing' ||
-      cpuIndex() === null ||
-      room.turn !== cpuIndex() ||
+      !room.cpuIndexes || !room.cpuIndexes.includes(room.turn) ||
       room.phase !== 'draw' ||
-      room.players[cpuIndex()]?.eliminated ||
+      room.players[room.turn]?.eliminated ||
       !isCpuController()
     ) {
       return;
@@ -2156,30 +2160,32 @@
   }
 
   async function cpuTakeTurn() {
-    const ci = cpuIndex();
+    // 実行時点の最新の手番を必ず読み直す(スケジュール時から状態が
+    // 変わっている可能性があるため)。
+    const ci = room.turn;
 
     if (
       !isCpuController() ||
       room.status !== 'playing' ||
-      room.turn !== ci ||
+      !room.cpuIndexes.includes(ci) ||
       room.phase !== 'draw' ||
       room.players[ci].eliminated
     ) return;
 
-    let tuples = cpuCandidateTuples();
+    let tuples = cpuCandidateTuples(ci);
 
     if (tuples.length === 0) {
       console.warn('CPU candidate tuples became empty; falling back.');
-      tuples = cpuCandidateTuples(false);
+      tuples = cpuCandidateTuples(ci, false);
     }
 
     if (tuples.length === 1) {
       await sleep(450);
-      await cpuDeclare(tuples[0]);
+      await cpuDeclare(tuples[0], ci);
       return;
     }
 
-    const color = chooseCpuDrawColor(tuples);
+    const color = chooseCpuDrawColor(tuples, ci);
     if (!color) return;
 
     const drawOptions = room.remaining.filter(
@@ -2211,15 +2217,15 @@
       room.phase !== 'clue'
     ) return;
 
-    tuples = cpuCandidateTuples();
+    tuples = cpuCandidateTuples(ci);
 
     if (tuples.length === 0) {
-      tuples = cpuCandidateTuples(false);
+      tuples = cpuCandidateTuples(ci, false);
     }
 
     if (tuples.length === 1) {
       await sleep(300);
-      await cpuDeclare(tuples[0]);
+      await cpuDeclare(tuples[0], ci);
       return;
     }
 
@@ -2278,7 +2284,7 @@
   async function rematch() {
     stopConfetti();
 
-    if (room.mode === 'cpu2') {
+    if (room.mode === 'local') {
       const next = setupGame(structuredClone(room));
 
       localStorage.removeItem(notesKey());
@@ -2330,10 +2336,67 @@
   ========================= */
 
   els.soundToggle.onclick = toggleSound;
-  els.cpuStart.onclick = startCpuGame;
-  els.create2.onclick = () => createOnlineRoom('online2');
-  els.create3.onclick = () => createOnlineRoom('online3cpu');
   els.join.onclick = joinRoom;
+
+  /* ---- 人数/CPU人数ピッカー ---- */
+
+  let localCpuCount = 1;
+  let onlineTotal = 2;
+  let onlineCpuCount = 0;
+
+  function pickerSetActive(container, value) {
+    [...container.querySelectorAll('button')].forEach(b => {
+      b.classList.toggle('active', Number(b.dataset.value) === value);
+    });
+  }
+
+  [...els.cpuCountPicker.querySelectorAll('button')].forEach(btn => {
+    btn.onclick = () => {
+      localCpuCount = Number(btn.dataset.value);
+      pickerSetActive(els.cpuCountPicker, localCpuCount);
+    };
+  });
+
+  // オンライン対戦は「人間が必ず2人以上」を条件にする(1人+CPUだけならCPU戦を使う)。
+  // そのためCPU人数の上限は 合計人数-2。
+  function renderOnlineCpuPicker() {
+    const maxCpu = Math.max(0, onlineTotal - 2);
+    if (onlineCpuCount > maxCpu) onlineCpuCount = maxCpu;
+
+    els.onlineCpuPicker.innerHTML = Array.from({ length: maxCpu + 1 }, (_, n) => `
+      <button type="button" data-value="${n}" class="count-btn ${n === onlineCpuCount ? 'active' : ''}">${n}体</button>
+    `).join('');
+
+    [...els.onlineCpuPicker.querySelectorAll('button')].forEach(btn => {
+      btn.onclick = () => {
+        onlineCpuCount = Number(btn.dataset.value);
+        renderOnlineCpuPicker();
+        updateOnlineHint();
+      };
+    });
+  }
+
+  function updateOnlineHint() {
+    const humans = onlineTotal - onlineCpuCount;
+    const joiners = humans - 1;
+    els.onlineComposeHint.textContent =
+      `合計${onlineTotal}人(人間${humans}人${onlineCpuCount > 0 ? `＋CPU${onlineCpuCount}体` : ''})／あと${joiners}人の参加が必要です`;
+  }
+
+  [...els.totalPlayerPicker.querySelectorAll('button')].forEach(btn => {
+    btn.onclick = () => {
+      onlineTotal = Number(btn.dataset.value);
+      pickerSetActive(els.totalPlayerPicker, onlineTotal);
+      renderOnlineCpuPicker();
+      updateOnlineHint();
+    };
+  });
+
+  renderOnlineCpuPicker();
+  updateOnlineHint();
+
+  els.cpuStart.onclick = () => startLocalGame(localCpuCount);
+  els.createOnline.onclick = () => createOnlineRoom(onlineTotal, onlineCpuCount);
 
   els.copyCode.onclick = async () => {
     try {
