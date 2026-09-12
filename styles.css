@@ -1,0 +1,84 @@
+:root{
+  --bg:#17131f;--surface:#231d2d;--surface-2:#2f273b;--text:#f9f7fb;--muted:#b8afc2;
+  --line:#463a55;--accent:#f0d26f;--accent2:#9ee6cf;--danger:#ff6b6b;
+  --green:#2fa46f;--pink:#cf72b7;--blue:#42a8c7;--red:#e05252;--orange:#e59a35;
+  --shadow:0 14px 40px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif}
+button,input{font:inherit}button{cursor:pointer}
+.hidden{display:none!important}
+
+.topbar{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(23,19,31,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.brand{font-weight:900;letter-spacing:.12em}.sub{font-size:12px;color:var(--muted);margin-top:2px}
+.top-actions{display:flex;align-items:center;gap:6px}.sound-toggle{padding:7px 9px;font-size:11px;white-space:nowrap}
+.shell{width:min(760px,100%);margin:0 auto;padding:18px 14px 80px}.screen{animation:fade .18s ease}
+
+.hero{padding:20px 4px 14px}.hero h1{font-size:clamp(28px,8vw,46px);line-height:1.08;margin:0 0 12px}.hero p{color:var(--muted);margin:0;line-height:1.7}
+.setup-grid{display:grid;gap:14px}
+
+.panel,.action-panel,.board-section{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.panel h2,.board-section h2{margin:0 0 12px;font-size:18px}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
+input{width:100%;border:1px solid var(--line);background:#16121d;color:var(--text);border-radius:12px;padding:14px 13px;outline:none}
+input:focus{border-color:var(--accent)}
+
+button{border:0;border-radius:12px;padding:13px 15px;font-weight:800}
+.primary{background:var(--accent);color:#241d13;width:100%;margin-top:14px}
+.alt-primary{margin-top:8px;background:var(--accent2)}
+.secondary{background:var(--surface-2);color:var(--text);border:1px solid #5e4e70}
+.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.danger{background:var(--danger);color:#1d1010}.wide,.full{width:100%}.wide{padding:16px;margin-top:16px}
+.divider{text-align:center;color:var(--muted);font-size:12px;margin:18px 0 4px}
+.notice{padding:13px 14px;border-radius:14px;margin-bottom:14px;display:grid;gap:4px}.warning{background:#3a2d16;border:1px solid #7a5d24}
+.center{text-align:center}.eyebrow{font-size:12px;color:var(--muted);letter-spacing:.18em}.room-code{font-size:46px;font-weight:950;letter-spacing:.12em;margin:10px 0}
+
+.status-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.mini-code{font-size:12px;color:var(--muted)}.turn-text{font-weight:900;margin-top:2px}
+.player-badge{font-size:13px;background:var(--surface-2);border:1px solid var(--line);padding:8px 10px;border-radius:99px}
+.board-section{margin-bottom:12px;box-shadow:none}.board-section.own{background:#1d1926}
+.opponent-board.eliminated{opacity:.58}.player-state{font-size:10px;padding:4px 7px;border-radius:99px;background:#18131f;color:var(--muted)}
+.player-state.cpu{background:#28323c;color:#bfe6ff}.player-state.out{background:#402326;color:#ffb8b8}
+.section-title-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.section-title-row h2{margin:0}.hint,.small{font-size:12px;color:var(--muted)}
+
+.rack{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:14px}
+.tile{min-width:0;aspect-ratio:.82;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);border:2px solid rgba(255,255,255,.16);color:white;position:relative;user-select:none}
+.tile .num{font-weight:950;font-size:clamp(20px,7vw,34px)}.tile .dots{font-size:11px;letter-spacing:2px;margin-top:3px}.tile .color-name{font-size:9px;opacity:.9;margin-top:3px}.tile.hidden-num .num{font-size:28px}
+.tile.green{background:var(--green)}.tile.pink{background:var(--pink)}.tile.blue{background:var(--blue)}.tile.red{background:var(--red)}.tile.orange{background:var(--orange)}
+.public-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.public-tiles .tile{aspect-ratio:1.15}.public-tiles .tile.selected{outline:4px solid var(--accent);outline-offset:2px}
+
+.action-panel{margin-bottom:12px;box-shadow:none}.action-panel h3{margin:0 0 6px}
+.color-actions{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}.color-dot{height:46px;border-radius:12px;border:2px solid rgba(255,255,255,.2)}
+.color-dot.green{background:var(--green)}.color-dot.pink{background:var(--pink)}.color-dot.blue{background:var(--blue)}.color-dot.red{background:var(--red)}.color-dot.orange{background:var(--orange)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.selected-tile-wrap{width:90px;margin:12px auto}
+.compare-positions{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}.compare-positions button{padding:10px 4px;background:#342b40;color:white;border:1px solid #5d4f6d}
+
+.clue-log{display:grid;gap:8px;margin-top:12px}.clue-item{background:#19151f;border-left:4px solid var(--accent2);padding:10px 11px;border-radius:10px;font-size:13px;line-height:1.5}.clue-item.mine{border-left-color:var(--accent)}
+
+.deduction-grid{display:grid;gap:6px;margin-top:12px;overflow-x:hidden}.deduction-row{display:grid;grid-template-columns:14px repeat(12,minmax(0,1fr));gap:2px}
+.row-label{border-radius:5px}.row-label.green{background:var(--green)}.row-label.pink{background:var(--pink)}.row-label.blue{background:var(--blue)}.row-label.red{background:var(--red)}.row-label.orange{background:var(--orange)}
+.deduction-cell{position:relative;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:4px 1px 3px;text-align:center;color:white;line-height:1;min-width:0}
+.deduction-cell.green{background:var(--green)}.deduction-cell.pink{background:var(--pink)}.deduction-cell.blue{background:var(--blue)}.deduction-cell.red{background:var(--red)}.deduction-cell.orange{background:var(--orange)}
+.cell-num{font-weight:950;font-size:10px}.cell-dots{font-size:6px;margin-top:2px}.deduction-cell.crossed{opacity:.5}
+.deduction-cell.crossed::after{content:"×";position:absolute;inset:0;display:grid;place-items:center;color:#17131f;font-size:18px;font-weight:900}
+.small-btn{padding:7px 9px;font-size:11px}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.modal-card{width:min(760px,100%);background:var(--surface);border:1px solid var(--line);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:center}.modal-head h2{margin:0}.guess-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:14px 0}.guess-grid input{text-align:center;padding:12px 4px}
+
+.toast{position:fixed;left:50%;bottom:205px;transform:translateX(-50%);background:#0d0b11;color:white;border:1px solid var(--line);padding:10px 14px;border-radius:12px;z-index:120;max-width:calc(100% - 30px);text-align:center}
+.result-panel{margin-top:20px;margin-bottom:240px}.result-icon{font-size:60px}
+
+@keyframes fade{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+@media(max-width:680px){
+  .shell{padding-left:10px;padding-right:10px}
+  #gameScreen{padding-bottom:260px}
+  .panel,.action-panel,.board-section{padding:12px;border-radius:15px}
+  .rack{gap:5px}.tile .num{font-size:clamp(18px,6.4vw,28px)}
+  .deduction-panel{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:calc(100% - 12px);margin:0;padding:9px 8px calc(8px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;z-index:50;background:rgba(35,29,45,.98);box-shadow:0 -10px 30px rgba(0,0,0,.45)}
+  .deduction-help{display:none}.deduction-grid{gap:3px;margin-top:6px}.deduction-row{grid-template-columns:10px repeat(12,minmax(0,1fr));gap:1px}.deduction-cell{padding:3px 0 2px;border-radius:4px}.cell-num{font-size:9px}.cell-dots{font-size:5px;margin-top:1px}
+  /* 固定表示の推理ボードに隠れないよう、操作系要素に自動スクロール用の余白を確保する */
+  #drawPanel,#cluePanel,#comparePositions,#gotFiveBtn{scroll-margin-bottom:230px}
+}
+@media(min-width:681px){.setup-grid{grid-template-columns:1fr 1fr}}

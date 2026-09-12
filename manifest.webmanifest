@@ -1,0 +1,9 @@
+{
+  "name": "FIVE LOGIC",
+  "short_name": "FIVE LOGIC",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#17131f",
+  "theme_color": "#17131f",
+  "icons": []
+}

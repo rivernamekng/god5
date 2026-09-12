@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17131f">
+  <title>FIVE LOGIC</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2317131f'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23f0d26f' font-family='sans-serif' font-weight='900'%3E5%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css?v=5">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div>
+      <div class="brand">FIVE LOGIC</div>
+      <div class="sub">2人対戦 / CPU戦 / 3人戦</div>
+    </div>
+
+    <div class="top-actions">
+      <button id="soundToggleBtn" class="ghost sound-toggle">🔊 ON</button>
+      <button id="leaveBtn" class="ghost hidden">退出</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section id="setupScreen" class="screen">
+      <div class="hero">
+        <h1>どう遊ぶ？</h1>
+        <p>1人でCPU戦、友だちと2人対戦、または「人間2人＋CPU」の3人戦ができます。</p>
+      </div>
+
+      <div id="configWarning" class="notice warning hidden">
+        <strong>Supabase未設定です。</strong>
+        <span>CPU戦は遊べます。2人対戦・3人戦には、今まで使っている config.js が必要です。</span>
+      </div>
+
+      <div class="setup-grid">
+        <div class="panel">
+          <h2>CPU戦</h2>
+          <label>あなたの名前</label>
+          <input id="cpuPlayerName" maxlength="16" placeholder="例：けん">
+          <button id="cpuStartBtn" class="primary">CPUと対戦する</button>
+        </div>
+
+        <div class="panel">
+          <h2>オンライン対戦</h2>
+
+          <label>部屋を作る人の名前</label>
+          <input id="hostName" maxlength="16" placeholder="例：けん">
+
+          <button id="createBtn" class="secondary full">2人対戦の部屋を作る</button>
+          <button id="create3Btn" class="primary alt-primary">3人戦（人間2＋CPU）を作る</button>
+
+          <div class="divider">部屋に参加する</div>
+
+          <label>あなたの名前</label>
+          <input id="guestName" maxlength="16" placeholder="例：友人">
+
+          <label>部屋コード</label>
+          <input id="roomCodeInput" maxlength="6" autocapitalize="characters" placeholder="ABC123">
+
+          <button id="joinBtn" class="secondary full">コードで参加</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="waitingScreen" class="screen hidden">
+      <div class="panel center">
+        <div class="eyebrow">ROOM</div>
+        <div id="roomCodeBig" class="room-code">------</div>
+        <p id="waitingText">相手の参加を待っています…</p>
+        <button id="copyCodeBtn" class="secondary">コードをコピー</button>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen hidden">
+      <div class="status-row">
+        <div>
+          <div id="roomMini" class="mini-code"></div>
+          <div id="turnText" class="turn-text"></div>
+        </div>
+        <div id="meBadge" class="player-badge"></div>
+      </div>
+
+      <div id="opponentsArea"></div>
+
+      <section class="board-section own">
+        <div class="section-title-row">
+          <h2>あなたの5枚</h2>
+          <span id="myHandHint" class="hint">数字は秘密</span>
+        </div>
+        <div id="myHand" class="rack"></div>
+      </section>
+
+      <section class="board-section">
+        <div class="section-title-row">
+          <h2>場のタイル</h2>
+          <span id="phaseText" class="hint"></span>
+        </div>
+        <div id="publicTiles" class="public-tiles"></div>
+      </section>
+
+      <section id="drawPanel" class="action-panel hidden">
+        <h3>① 好きな色を1枚公開</h3>
+        <div id="drawColors" class="color-actions"></div>
+      </section>
+
+      <section id="cluePanel" class="action-panel hidden">
+        <h3>② 場のタイルを1枚選ぶ</h3>
+        <p class="small">タイルを選んで「分類」または「比較」を使います。</p>
+
+        <div id="selectedTileView" class="selected-tile-wrap hidden"></div>
+
+        <div id="clueButtons" class="two-col hidden">
+          <button id="categorizeBtn" class="secondary">分類する</button>
+          <button id="compareBtn" class="secondary">ドットを比較</button>
+        </div>
+
+        <div id="comparePositions" class="compare-positions hidden"></div>
+      </section>
+
+      <section class="board-section">
+        <div class="section-title-row">
+          <h2>これまでの手がかり</h2>
+          <span class="hint">全員に公開</span>
+        </div>
+        <div id="clueLog" class="clue-log"></div>
+      </section>
+
+      <section id="deductionPanel" class="board-section deduction-panel">
+        <div class="section-title-row">
+          <h2>推理ボード</h2>
+          <button id="resetNotesBtn" class="ghost small-btn">印を全消去</button>
+        </div>
+
+        <p class="small deduction-help">候補から外した数字をタップ。自分の端末だけに保存されます。</p>
+        <div id="deductionGrid" class="deduction-grid"></div>
+      </section>
+
+      <button id="gotFiveBtn" class="danger wide got-five-button">GOT FIVE! を宣言</button>
+    </section>
+
+    <section id="resultScreen" class="screen hidden">
+      <div class="panel center result-panel">
+        <div id="resultIcon" class="result-icon">★</div>
+        <h1 id="resultTitle">勝利！</h1>
+        <p id="resultText"></p>
+        <button id="newGameBtn" class="primary">再戦</button>
+        <button id="backHomeBtn" class="ghost full">トップへ戻る</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="modalTitle">GOT FIVE!</h2>
+        <button id="modalClose" class="ghost">×</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<script src="./app.js?v=5"></script>
+</body>
+</html>
