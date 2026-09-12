@@ -46,21 +46,20 @@
     meBadge: $('meBadge'),
 
     opponentsArea: $('opponentsArea'),
+    myInsertLane: $('myInsertLane'),
     myHand: $('myHand'),
     myHandHint: $('myHandHint'),
+    guessRow: $('guessRow'),
     publicTiles: $('publicTiles'),
     phaseText: $('phaseText'),
 
-    drawPanel: $('drawPanel'),
-    drawColors: $('drawColors'),
-    cluePanel: $('cluePanel'),
+    drawPiles: $('drawPiles'),
+    actionBar: $('actionBar'),
     selectedTileView: $('selectedTileView'),
-    clueButtons: $('clueButtons'),
     categorize: $('categorizeBtn'),
     compare: $('compareBtn'),
-    comparePositions: $('comparePositions'),
+    cancelSelect: $('cancelSelectBtn'),
 
-    clueLog: $('clueLog'),
     deductionGrid: $('deductionGrid'),
     resetNotes: $('resetNotesBtn'),
     gotFive: $('gotFiveBtn'),
@@ -83,6 +82,7 @@
   let room = null;
   let channel = null;
   let selectedPublic = null;
+  let compareMode = false;
   let cpuTimer = null;
   let previousMyTurn = null;
   let previousStatus = null;
@@ -90,8 +90,7 @@
   let lastScrollKey = null;
   let lastRenderedClueCount = 0;
 
-  // 固定表示の推理ボードが操作ボタン(分類/比較/GOT FIVE)を隠してしまわないよう、
-  // 自分の手番になった/フェーズが変わった時に操作エリアを自動でスクロール表示する。
+  // 自分の手番になった／段階が変わった時に、次に触る場所（山 or 場）を画面内へ寄せる。
   function maybeAutoScrollToAction(myTurn, gameOver, eliminated) {
     if (gameOver || eliminated || !myTurn || !room) {
       lastScrollKey = null;
@@ -102,10 +101,10 @@
     if (key === lastScrollKey) return;
     lastScrollKey = key;
 
+    const target = room.phase === 'draw' ? els.drawPiles : els.publicTiles;
+
     requestAnimationFrame(() => {
-      if (els.gotFive && !els.gotFive.classList.contains('hidden')) {
-        els.gotFive.scrollIntoView({ block: 'end', behavior: 'auto' });
-      }
+      if (target) target.scrollIntoView({ block: 'center', behavior: 'auto' });
     });
   }
 
@@ -520,6 +519,7 @@
 
     next = normalizeRoom(next);
     selectedPublic = null;
+    compareMode = false;
 
     if (isLocalMode()) {
       room = next;
@@ -838,6 +838,7 @@
 
           room = nextState;
           selectedPublic = null;
+          compareMode = false;
           render();
           maybeScheduleCpu();
         }
@@ -908,7 +909,90 @@
     previousStatus = room.status;
   }
 
-  function renderOpponents(gameOver) {
+  // そのプレイヤーの列に「差し込まれたコマ」を、実際に差し込まれる位置へ置いて描画する。
+  //   分類 → 5枚の“隙間”(0〜5)の位置に差し込む
+  //   比較 → 比べた1枚の真上に「=」「≠」付きで置く
+  // 同じ場所に複数ある場合は、列から遠ざかる向きに積み上げる。
+  function renderInsertLane(container, playerIndex, options = {}) {
+    const { below = false, compact = false, animateLatest = false } = options;
+
+    const clues = room.clues.filter(c => c.by === playerIndex);
+    const latest = room.clues[room.clues.length - 1];
+
+    container.className =
+      'insert-lane' + (below ? ' below' : '') + (compact ? ' compact' : '');
+    container.innerHTML = '';
+
+    if (!clues.length) {
+      container.classList.add('empty');
+      container.innerHTML =
+        '<div class="insert-empty">まだ差し込まれたコマはありません</div>';
+      container.style.height = '';
+      return;
+    }
+
+    const stacks = new Map();
+
+    clues.forEach(clue => {
+      const key = clue.type === 'categorize' ? `g${clue.slot}` : `p${clue.pos}`;
+      if (!stacks.has(key)) stacks.set(key, []);
+      stacks.get(key).push(clue);
+    });
+
+    let maxStack = 1;
+    stacks.forEach(list => {
+      list.sort((a, b) => a.tile - b.tile);
+      maxStack = Math.max(maxStack, list.length);
+    });
+
+    const step = compact ? 11 : 14;
+    const base = compact ? 30 : 38;
+    container.style.height = `${base + (maxStack - 1) * step}px`;
+
+    stacks.forEach((list, key) => {
+      const isGap = key[0] === 'g';
+      const index = Number(key.slice(1));
+
+      const stack = document.createElement('div');
+      stack.className = 'insert-stack';
+
+      // ラックの5列と同じグリッド上で、隙間なら列の端、比較なら列の中央に寄せる。
+      if (isGap) {
+        if (index === 0) {
+          stack.style.gridColumn = '1';
+          stack.classList.add('edge-start');
+        } else {
+          stack.style.gridColumn = String(index);
+          stack.classList.add(index === 5 ? 'edge-end' : 'edge-between');
+        }
+      } else {
+        stack.style.gridColumn = String(index + 1);
+      }
+
+      list.forEach((clue, depth) => {
+        const t = tileByN(clue.tile);
+        const chip = document.createElement('div');
+
+        chip.className =
+          'insert-chip ' + t.color + (isGap ? ' as-gap' : ' as-pos') +
+          (animateLatest && clue === latest ? ' just-placed' : '');
+
+        chip.style[below ? 'top' : 'bottom'] = `${depth * step}px`;
+
+        chip.innerHTML = `
+          <span class="chip-num">${clue.tile}</span>
+          <span class="chip-dots">${'●'.repeat(t.dots)}</span>
+          ${isGap ? '' : `<span class="chip-mark ${clue.yes ? 'same' : 'diff'}">${clue.yes ? '=' : '≠'}</span>`}
+        `;
+
+        stack.appendChild(chip);
+      });
+
+      container.appendChild(stack);
+    });
+  }
+
+  function renderOpponents(gameOver, animateLatest) {
     const meIndex = humanIndex();
 
     const opponents = room.players
@@ -919,19 +1003,28 @@
       const isCpu = i === cpuIndex();
       const stateClass = p.eliminated ? 'out' : isCpu ? 'cpu' : '';
       const stateText = p.eliminated ? '脱落' : isCpu ? 'CPU' : '対戦相手';
+      const isTurn = !gameOver && room.status === 'playing' && room.turn === i;
 
       return `
-        <section class="board-section opponent-board ${p.eliminated ? 'eliminated' : ''}">
+        <section class="board-section opponent-board ${p.eliminated ? 'eliminated' : ''} ${isTurn ? 'active-turn' : ''}">
           <div class="section-title-row">
-            <h2>${escapeHtml(p.name)} の5枚</h2>
+            <h2>${escapeHtml(p.name)} のコマ</h2>
             <span class="player-state ${stateClass}">${stateText}</span>
           </div>
-          <div class="rack">
+          <div class="rack opponent-rack">
             ${p.hand.map(n => tileHTML(n, false)).join('')}
           </div>
+          <div class="insert-lane below compact" data-lane-for="${i}"></div>
         </section>
       `;
     }).join('');
+
+    opponents.forEach(({ i }) => {
+      const lane = els.opponentsArea.querySelector(`[data-lane-for="${i}"]`);
+      if (lane) {
+        renderInsertLane(lane, i, { below: true, compact: true, animateLatest });
+      }
+    });
   }
 
   function render() {
@@ -1006,15 +1099,31 @@
       setTimeout(() => saveState(next, { scheduleCpu: false }), 0);
     }
 
-    renderOpponents(gameOver);
+    // 新しい手がかりが増えた時だけ、差し込まれたコマを動かす演出を出す。
+    const animateLatest = room.clues.length > lastRenderedClueCount;
+    lastRenderedClueCount = room.clues.length;
+
+    renderOpponents(gameOver, animateLatest);
 
     els.myHandHint.textContent =
       gameOver ? '最終公開' : '数字は秘密';
+
+    renderInsertLane(els.myInsertLane, meIndex, { animateLatest });
 
     els.myHand.innerHTML =
       me.hand
         .map(n => tileHTML(n, !gameOver))
         .join('');
+
+    // 比較のときは「1番目〜5番目」のボタンではなく、実際に自分のコマをタップして選ぶ。
+    if (compareMode && myTurn && room.phase === 'clue') {
+      [...els.myHand.querySelectorAll('.tile')].forEach((node, pos) => {
+        node.classList.add('choosable');
+        node.onclick = () => compareAt(pos);
+      });
+    }
+
+    renderGuessRow(gameOver);
 
     els.publicTiles.innerHTML =
       room.public
@@ -1030,20 +1139,20 @@
         node.onclick = () => {
           if (!myTurn || room.phase !== 'clue') return;
           selectedPublic = n;
-          renderActionState();
+          compareMode = false;
+          render();
           maybeAutoScrollToAction(myTurn, gameOver, me.eliminated);
         };
       });
     }
 
-    renderClues();
     renderDeduction();
 
     if (gameOver) {
-      els.drawPanel.classList.add('hidden');
-      els.cluePanel.classList.add('hidden');
+      els.actionBar.classList.add('hidden');
       els.phaseText.textContent = '最終局面';
       els.gotFive.classList.add('hidden');
+      renderDrawPiles(false);
 
       els.result.classList.remove('hidden');
       renderResult();
@@ -1053,10 +1162,10 @@
     els.result.classList.add('hidden');
 
     if (me.eliminated) {
-      els.drawPanel.classList.add('hidden');
-      els.cluePanel.classList.add('hidden');
+      els.actionBar.classList.add('hidden');
       els.gotFive.classList.add('hidden');
       els.phaseText.textContent = '観戦中';
+      renderDrawPiles(false);
       return;
     }
 
@@ -1065,65 +1174,165 @@
     maybeAutoScrollToAction(myTurn, gameOver, me.eliminated);
   }
 
+  // 5色の山を「裏向きに積まれたコマ」として描画する。めくれる時だけ押せる。
+  function renderDrawPiles(canDraw) {
+    els.drawPiles.innerHTML = '';
+
+    COLORS.forEach(c => {
+      const left = room.remaining.filter(
+        n => tileByN(n).color === c.key
+      ).length;
+
+      const pile = document.createElement('button');
+      pile.className =
+        `draw-pile ${c.key}` +
+        (left === 0 ? ' empty' : '') +
+        (canDraw && left > 0 ? ' ready' : '');
+      pile.disabled = !canDraw || left === 0;
+      pile.title = `${c.label} 残り${left}枚`;
+
+      pile.innerHTML = `
+        <span class="pile-face">${left === 0 ? '' : '★'}</span>
+        <span class="pile-count">${left}</span>
+      `;
+
+      pile.onclick = () => drawTile(c.key);
+      els.drawPiles.appendChild(pile);
+    });
+  }
+
   function renderActionState() {
     const meIndex = humanIndex();
     const me = room.players[meIndex];
     const myTurn =
+      room.status === 'playing' &&
       !me.eliminated &&
       room.turn === meIndex;
 
-    els.drawPanel.classList.toggle(
-      'hidden',
-      !(myTurn && room.phase === 'draw')
-    );
+    const canDraw = myTurn && room.phase === 'draw';
+    const canClue = myTurn && room.phase === 'clue';
 
-    els.cluePanel.classList.toggle(
-      'hidden',
-      !(myTurn && room.phase === 'clue')
-    );
+    renderDrawPiles(canDraw);
+
+    els.actionBar.classList.toggle('hidden', !(canClue && selectedPublic));
+
+    if (canClue && selectedPublic) {
+      els.selectedTileView.innerHTML = tileHTML(selectedPublic);
+    }
+
+    els.myHand.classList.toggle('choosing', canClue && compareMode);
 
     if (!myTurn) {
       els.phaseText.textContent =
         room.turn === cpuIndex()
           ? 'CPUの操作中'
           : '相手の操作待ち';
+    } else if (canDraw) {
+      els.phaseText.textContent = '① 山から1枚めくる';
+    } else if (compareMode) {
+      els.phaseText.textContent = '③ 自分のコマをタップ';
+    } else if (selectedPublic) {
+      els.phaseText.textContent = '③ 差し込む か 比べる を選ぶ';
     } else {
-      els.phaseText.textContent =
-        room.phase === 'draw'
-          ? 'まず1枚公開'
-          : '手がかりを選択';
+      els.phaseText.textContent = '② 場のコマを1枚選ぶ';
     }
+  }
 
-    if (myTurn && room.phase === 'draw') {
-      els.drawColors.innerHTML = COLORS.map(c => {
-        const left = room.remaining.filter(
-          n => tileByN(n).color === c.key
-        ).length;
+  /* =========================
+     数字メモ（自分の端末だけに保存）
+  ========================= */
 
-        return `
-          <button
-            class="color-dot ${c.key}"
-            data-color="${c.key}"
-            ${left === 0 ? 'disabled' : ''}
-            title="${c.label} 残り${left}枚"
-          ></button>
-        `;
-      }).join('');
+  function guessKey() {
+    const dealId = room?.dealId || 'legacy';
+    return `fiveLogicGuess:${session.code}:${session.token}:${dealId}`;
+  }
 
-      [...els.drawColors.querySelectorAll('button')].forEach(button => {
-        button.onclick = () => drawTile(button.dataset.color);
-      });
+  function getGuesses() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(guessKey()) || '[]');
+      return Array.isArray(raw) ? raw : [];
+    } catch (_) {
+      return [];
     }
+  }
 
-    if (myTurn && room.phase === 'clue') {
-      els.selectedTileView.classList.toggle('hidden', !selectedPublic);
-      els.clueButtons.classList.toggle('hidden', !selectedPublic);
-      els.comparePositions.classList.add('hidden');
+  function saveGuesses(list) {
+    try {
+      localStorage.setItem(guessKey(), JSON.stringify(list));
+    } catch (_) {
+      /* 保存できなくてもゲームは続行する */
+    }
+  }
 
-      if (selectedPublic) {
-        els.selectedTileView.innerHTML = tileHTML(selectedPublic);
+  // 位置ごとの色は自分にも見えている情報なので、色が合わない数字や
+  // 昇順になっていない数字はその場で赤く知らせる。
+  function validateGuessRow() {
+    const inputs = [...els.guessRow.querySelectorAll('.guess-input')];
+    const values = inputs.map(i => (i.value === '' ? null : Number(i.value)));
+
+    inputs.forEach((input, pos) => {
+      const v = values[pos];
+      let bad = false;
+
+      if (v !== null) {
+        if (!Number.isInteger(v) || v < 1 || v > 60) {
+          bad = true;
+        } else if (tileByN(v).color !== input.dataset.color) {
+          bad = true;
+        } else {
+          for (let k = 0; k < pos; k++) {
+            if (values[k] !== null && values[k] >= v) bad = true;
+          }
+          for (let k = pos + 1; k < 5; k++) {
+            if (values[k] !== null && values[k] <= v) bad = true;
+          }
+        }
       }
-    }
+
+      input.classList.toggle('invalid', bad);
+    });
+  }
+
+  function renderGuessRow(gameOver) {
+    const me = room.players[humanIndex()];
+    const saved = getGuesses();
+
+    els.guessRow.innerHTML = '';
+
+    me.hand.forEach((actualN, pos) => {
+      const color = tileByN(actualN).color;
+      const cell = document.createElement('div');
+      cell.className = `guess-cell ${color}`;
+
+      if (gameOver) {
+        cell.classList.add('revealed');
+        cell.textContent = actualN;
+        els.guessRow.appendChild(cell);
+        return;
+      }
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.inputMode = 'numeric';
+      input.maxLength = 2;
+      input.className = 'guess-input';
+      input.placeholder = '?';
+      input.value = saved[pos] || '';
+      input.dataset.color = color;
+
+      input.oninput = () => {
+        input.value = input.value.replace(/[^0-9]/g, '').slice(0, 2);
+        const list = getGuesses();
+        list[pos] = input.value;
+        saveGuesses(list);
+        validateGuessRow();
+      };
+
+      cell.appendChild(input);
+      els.guessRow.appendChild(cell);
+    });
+
+    if (!gameOver) validateGuessRow();
   }
 
   /* =========================
@@ -1190,28 +1399,23 @@
     await saveState(next);
   }
 
+  // 「ドットを比べる」を押したら、自分のコマを実際にタップして相手を選ぶ。
   function openCompare() {
     if (!selectedPublic) return;
 
-    els.comparePositions.classList.remove('hidden');
-
-    els.comparePositions.innerHTML = Array.from(
-      { length: 5 },
-      (_, i) => `<button data-pos="${i}">${i + 1}番目</button>`
-    ).join('');
-
-    [...els.comparePositions.querySelectorAll('button')].forEach(button => {
-      button.onclick = () =>
-        compareAt(Number(button.dataset.pos));
-    });
+    compareMode = true;
+    render();
+    toast('比べたい自分のコマをタップしてください');
 
     requestAnimationFrame(() => {
-      els.comparePositions.scrollIntoView({ block: 'end', behavior: 'auto' });
+      els.myHand.scrollIntoView({ block: 'center', behavior: 'auto' });
     });
   }
 
   async function compareAt(pos) {
     if (!selectedPublic) return;
+
+    compareMode = false;
 
     const meIndex = humanIndex();
     const next = structuredClone(room);
@@ -1249,108 +1453,12 @@
 
     next.turn = nextTurn;
     selectedPublic = null;
+    compareMode = false;
   }
 
   /* =========================
-     Clues / notes
+     Notes
   ========================= */
-
-  // 手がかりを文章ではなく、実際に駒(タイル)が自分の5枚のどこに
-  // 入るか/どこと比べたかが分かるミニ図解として表示する。
-  function renderClues() {
-    const items = [...room.clues].reverse();
-    const isNewTop = room.clues.length > lastRenderedClueCount;
-    lastRenderedClueCount = room.clues.length;
-
-    els.clueLog.innerHTML = '';
-
-    if (!items.length) {
-      lastRenderedClueCount = 0;
-      els.clueLog.innerHTML = '<div class="small">まだ手がかりはありません。</div>';
-      return;
-    }
-
-    items.forEach((clue, idx) => {
-      const who = room.players[clue.by]?.name || 'プレイヤー';
-      const t = tileByN(clue.tile);
-
-      const card = document.createElement('div');
-      card.className =
-        'clue-card' +
-        (clue.by === humanIndex() ? ' mine' : '') +
-        (idx === 0 && isNewTop ? ' new' : '');
-
-      const head = document.createElement('div');
-      head.className = 'clue-head';
-      head.innerHTML = `
-        <span class="clue-name">${escapeHtml(who)}</span>
-        <span class="clue-badge ${clue.type === 'compare' ? 'compare' : ''}">${clue.type === 'compare' ? '比較' : '分類'}</span>
-      `;
-      card.appendChild(head);
-
-      const track = document.createElement('div');
-
-      if (clue.type === 'categorize') {
-        // 5枚(未公開)の間の6つの「隙間」のどこにタイルが入るかを、
-        // 実際にタイルをその隙間へ差し込む形で表示する。
-        track.className = 'clue-track';
-
-        for (let gap = 0; gap <= 5; gap++) {
-          const gapEl = document.createElement('span');
-
-          if (gap === clue.slot) {
-            gapEl.className = 'slot-gap active';
-            gapEl.innerHTML = `
-              <span class="mini-tile ${t.color}">
-                ${clue.tile}
-                <div class="mini-dots">${'●'.repeat(t.dots)}</div>
-              </span>
-            `;
-          } else {
-            gapEl.className = 'slot-gap';
-          }
-
-          track.appendChild(gapEl);
-
-          if (gap < 5) {
-            const slotEl = document.createElement('span');
-            slotEl.className = 'mini-slot';
-            track.appendChild(slotEl);
-          }
-        }
-      } else {
-        // 5枚(未公開)のうち、どの位置と比べたかをハイライトし、
-        // 実際に公開されたタイルを「=(同じ)/≠(違う)」でつなげて表示する。
-        track.className = 'clue-track compare-track';
-
-        for (let pos = 0; pos < 5; pos++) {
-          const slotEl = document.createElement('span');
-
-          if (pos === clue.pos) {
-            slotEl.className = 'mini-slot highlight';
-            slotEl.textContent = String(pos + 1);
-          } else {
-            slotEl.className = 'mini-slot';
-          }
-
-          track.appendChild(slotEl);
-        }
-
-        const link = document.createElement('span');
-        link.className = `compare-link ${clue.yes ? 'same' : 'diff'}`;
-        link.textContent = clue.yes ? '=' : '≠';
-        track.appendChild(link);
-
-        const tileEl = document.createElement('span');
-        tileEl.className = `mini-tile ${t.color}`;
-        tileEl.innerHTML = `${clue.tile}<div class="mini-dots">${'●'.repeat(t.dots)}</div>`;
-        track.appendChild(tileEl);
-      }
-
-      card.appendChild(track);
-      els.clueLog.appendChild(card);
-    });
-  }
 
   function notesKey() {
     // dealId(対局ごとに再発行される)を含めることで、再戦のたびに
@@ -1425,66 +1533,44 @@
      In 3-player the remaining players continue.
   ========================= */
 
+  // 宣言は、自分のコマの下にある「数字メモ」に書いた5つで行う。
   function openGuess() {
     const me = room.players[humanIndex()];
 
     if (me.eliminated || room.status !== 'playing') return;
 
-    els.modalTitle.textContent = 'GOT FIVE!';
-
-    els.modalBody.innerHTML = `
-      <p class="small">
-        自分の5枚を小さい順に入力してください。間違えると脱落します。
-      </p>
-
-      <div class="guess-grid">
-        ${Array.from(
-          { length: 5 },
-          (_, i) => `
-            <input
-              class="guess"
-              type="number"
-              min="1"
-              max="60"
-              inputmode="numeric"
-              placeholder="${i + 1}"
-            >
-          `
-        ).join('')}
-      </div>
-
-      <button id="submitGuess" class="danger wide">
-        この5つで宣言する
-      </button>
-    `;
-
-    els.modal.classList.remove('hidden');
-    $('submitGuess').onclick = submitGuess;
-  }
-
-  async function submitGuess() {
-    const values = [...document.querySelectorAll('.guess')]
+    const values = [...els.guessRow.querySelectorAll('.guess-input')]
       .map(input => Number(input.value));
 
-    if (
-      values.some(
-        v =>
-          !Number.isInteger(v) ||
-          v < 1 ||
-          v > 60
-      )
-    ) {
-      toast('1〜60を5つ入力してください');
+    if (values.length !== 5 || values.some(v => !Number.isInteger(v) || v < 1 || v > 60)) {
+      toast('自分のコマの下に、5つの数字を書き込んでください');
+      els.guessRow.scrollIntoView({ block: 'center', behavior: 'auto' });
       return;
     }
 
     const sorted = [...values].sort((a, b) => a - b);
 
     if (sorted.some((v, i) => v !== values[i])) {
-      toast('小さい順に入力してください');
+      toast('左から小さい順になるように直してください');
+      els.guessRow.scrollIntoView({ block: 'center', behavior: 'auto' });
       return;
     }
 
+    els.modalTitle.textContent = 'GOT FIVE! を宣言しますか？';
+
+    els.modalBody.innerHTML = `
+      <p class="small">この5枚で宣言します。間違えると脱落します。</p>
+      <div class="rack confirm-rack">
+        ${values.map(n => tileHTML(n)).join('')}
+      </div>
+      <button id="submitGuess" class="danger wide">この5枚で宣言する</button>
+    `;
+
+    els.modal.classList.remove('hidden');
+    $('submitGuess').onclick = () => submitGuess(values);
+  }
+
+  async function submitGuess(values) {
     const meIndex = humanIndex();
     const next = structuredClone(room);
 
@@ -2030,6 +2116,7 @@
     channel = null;
     room = null;
     selectedPublic = null;
+    compareMode = false;
     previousMyTurn = null;
     previousStatus = null;
 
@@ -2063,6 +2150,12 @@
   els.categorize.onclick = categorize;
   els.compare.onclick = openCompare;
   els.gotFive.onclick = openGuess;
+
+  els.cancelSelect.onclick = () => {
+    selectedPublic = null;
+    compareMode = false;
+    render();
+  };
 
   els.modalClose.onclick = () =>
     els.modal.classList.add('hidden');

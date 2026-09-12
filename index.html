@@ -7,7 +7,7 @@
   <title>FIVE LOGIC</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2317131f'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23f0d26f' font-family='sans-serif' font-weight='900'%3E5%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=6">
+  <link rel="stylesheet" href="./styles.css?v=7">
 </head>
 <body>
 <div id="app">
@@ -83,49 +83,43 @@
         <div id="meBadge" class="player-badge"></div>
       </div>
 
+      <!-- 相手のコマ + 相手が差し込んだコマ（テーブルの向こう側） -->
       <div id="opponentsArea"></div>
 
-      <section class="board-section own">
+      <!-- テーブル中央：5色の裏向きの山と、場に出ているコマ -->
+      <section class="board-section table-center">
         <div class="section-title-row">
-          <h2>あなたの5枚</h2>
-          <span id="myHandHint" class="hint">数字は秘密</span>
-        </div>
-        <div id="myHand" class="rack"></div>
-      </section>
-
-      <section class="board-section">
-        <div class="section-title-row">
-          <h2>場のタイル</h2>
+          <h2>テーブル中央</h2>
           <span id="phaseText" class="hint"></span>
         </div>
+
+        <div class="lane-label">5色の山（裏向き）</div>
+        <div id="drawPiles" class="draw-piles"></div>
+
+        <div class="lane-label">場に出ているコマ</div>
         <div id="publicTiles" class="public-tiles"></div>
-      </section>
 
-      <section id="drawPanel" class="action-panel hidden">
-        <h3>① 好きな色を1枚公開</h3>
-        <div id="drawColors" class="color-actions"></div>
-      </section>
-
-      <section id="cluePanel" class="action-panel hidden">
-        <h3>② 場のタイルを1枚選ぶ</h3>
-        <p class="small">タイルを選んで「分類」または「比較」を使います。</p>
-
-        <div id="selectedTileView" class="selected-tile-wrap hidden"></div>
-
-        <div id="clueButtons" class="two-col hidden">
-          <button id="categorizeBtn" class="secondary">分類する</button>
-          <button id="compareBtn" class="secondary">ドットを比較</button>
+        <div id="actionBar" class="action-bar hidden">
+          <div id="selectedTileView" class="selected-tile-wrap"></div>
+          <div class="action-buttons">
+            <button id="categorizeBtn" class="secondary">自分の列に差し込む</button>
+            <button id="compareBtn" class="secondary">ドットを比べる</button>
+          </div>
+          <button id="cancelSelectBtn" class="ghost small-btn">選び直す</button>
         </div>
-
-        <div id="comparePositions" class="compare-positions hidden"></div>
       </section>
 
-      <section class="board-section">
+      <!-- 自分側：差し込まれたコマ → 自分のコマ → 数字メモ -->
+      <section class="board-section own-area">
         <div class="section-title-row">
-          <h2>これまでの手がかり</h2>
-          <span class="hint">全員に公開</span>
+          <h2>あなたのコマ</h2>
+          <span id="myHandHint" class="hint">数字は秘密</span>
         </div>
-        <div id="clueLog" class="clue-log"></div>
+
+        <div id="myInsertLane" class="insert-lane"></div>
+        <div id="myHand" class="rack"></div>
+        <div id="guessRow" class="guess-row"></div>
+        <p class="small guess-hint">推理した数字をメモできます（自分の端末だけに保存され、相手には見えません）</p>
       </section>
 
       <section id="deductionPanel" class="board-section deduction-panel">
@@ -167,6 +161,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=6"></script>
+<script src="./app.js?v=7"></script>
 </body>
 </html>
