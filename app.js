@@ -90,6 +90,7 @@
   let selectedPublic = null;
   let compareMode = false;
   let cpuTimer = null;
+  let cpuWatchdogTimer = null;
   let previousMyTurn = null;
   let previousStatus = null;
   let autoSkipRevision = null;
@@ -497,12 +498,15 @@
     return room?.mode === 'local' || session?.mode === 'local';
   }
 
-  // CPUの操作(推理・行動選択)は、何体いても必ずホスト側(またはlocalモードの本人)の
-  // ブラウザ1つだけが担当する。二重行動を防ぐための唯一の判定箇所。
-  function isCpuController() {
+  // CPUの操作(推理・行動選択)は、通常は何体いても必ずホスト側(またはlocalモードの
+  // 本人)のブラウザ1つだけが担当する。ただしホストの画面が固まって(バックグラウンド化・
+  // 通信切断など)一定時間CPUの手番が進まない場合は、force=trueで他の端末が「肩代わり」
+  // できるようにする(scheduleCpuWatchdog参照)。revisionガードがあるため、複数端末が
+  // 同時に肩代わりしようとしても二重には進まない。
+  function isCpuController(force = false) {
     if (!room || !room.cpuIndexes || room.cpuIndexes.length === 0) return false;
     if (room.mode === 'local') return true;
-    if (room.mode === 'online') return session?.playerIndex === 0;
+    if (room.mode === 'online') return force || session?.playerIndex === 0;
     return false;
   }
 
@@ -2144,6 +2148,7 @@
   // isCpuController()がホスト以外では常にfalseを返すため、二重実行は起きない。
   function maybeScheduleCpu() {
     clearTimeout(cpuTimer);
+    scheduleCpuWatchdog();
 
     if (
       !room ||
@@ -2156,16 +2161,52 @@
       return;
     }
 
-    cpuTimer = setTimeout(cpuTakeTurn, 650);
+    cpuTimer = setTimeout(() => cpuTakeTurn(), 650);
   }
 
-  async function cpuTakeTurn() {
+  // ホスト(playerIndex===0)の端末がバックグラウンド化・通信切断などでCPUの手番を
+  // 進められなくなった場合の保険。同じ手番・同じrevisionのまま一定時間が過ぎたら、
+  // ゲストの端末が代わりにCPUを動かす。revisionガードにより、複数端末が同時に
+  // 肩代わりしようとしても実際に反映されるのは1回だけ。
+  function scheduleCpuWatchdog() {
+    clearTimeout(cpuWatchdogTimer);
+
+    if (
+      !room ||
+      room.mode !== 'online' ||
+      session?.playerIndex === 0 ||
+      room.status !== 'playing' ||
+      !room.cpuIndexes || !room.cpuIndexes.includes(room.turn) ||
+      room.players[room.turn]?.eliminated
+    ) {
+      return;
+    }
+
+    const watchedRevision = room.revision;
+    const watchedTurn = room.turn;
+    const watchedPhase = room.phase;
+
+    cpuWatchdogTimer = setTimeout(() => {
+      if (
+        room &&
+        room.mode === 'online' &&
+        room.status === 'playing' &&
+        room.turn === watchedTurn &&
+        room.phase === watchedPhase &&
+        room.revision === watchedRevision
+      ) {
+        cpuTakeTurn(true);
+      }
+    }, 8000);
+  }
+
+  async function cpuTakeTurn(force = false) {
     // 実行時点の最新の手番を必ず読み直す(スケジュール時から状態が
     // 変わっている可能性があるため)。
     const ci = room.turn;
 
     if (
-      !isCpuController() ||
+      !isCpuController(force) ||
       room.status !== 'playing' ||
       !room.cpuIndexes.includes(ci) ||
       room.phase !== 'draw' ||
@@ -2311,6 +2352,7 @@
 
   function clearSession() {
     clearTimeout(cpuTimer);
+    clearTimeout(cpuWatchdogTimer);
     stopConfetti();
 
     if (channel && sb) {
