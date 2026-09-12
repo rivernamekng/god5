@@ -7,7 +7,7 @@
   <title>FIVE LOGIC</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%2317131f'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23f0d26f' font-family='sans-serif' font-weight='900'%3E5%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=9">
+  <link rel="stylesheet" href="./styles.css?v=10">
 </head>
 <body>
 <div id="app">
@@ -93,19 +93,15 @@
           <span id="phaseText" class="hint"></span>
         </div>
 
-        <div class="lane-label">5色の山（裏向き）</div>
         <div id="drawPiles" class="draw-piles"></div>
-
-        <div class="lane-label">場に出ているコマ</div>
         <div id="publicTiles" class="public-tiles"></div>
 
         <div id="actionBar" class="action-bar hidden">
-          <div id="selectedTileView" class="selected-tile-wrap"></div>
           <div class="action-buttons">
-            <button id="categorizeBtn" class="secondary">自分の列に差し込む</button>
+            <button id="categorizeBtn" class="secondary">差し込む</button>
             <button id="compareBtn" class="secondary">ドットを比べる</button>
+            <button id="cancelSelectBtn" class="ghost" title="選び直す">×</button>
           </div>
-          <button id="cancelSelectBtn" class="ghost small-btn">選び直す</button>
         </div>
       </section>
 
@@ -135,16 +131,22 @@
       <button id="gotFiveBtn" class="danger wide got-five-button">GOT FIVE! を宣言</button>
     </section>
 
-    <section id="resultScreen" class="screen hidden">
-      <div class="panel center result-panel">
-        <div id="resultIcon" class="result-icon">★</div>
-        <h1 id="resultTitle">勝利！</h1>
-        <p id="resultText"></p>
-        <button id="newGameBtn" class="primary">再戦</button>
-        <button id="backHomeBtn" class="ghost full">トップへ戻る</button>
-      </div>
-    </section>
   </main>
+
+  <!-- 勝敗は画面の前面に大きく出す。盤面は下に残しておき、いつでも確認できる -->
+  <div id="resultScreen" class="result-overlay hidden">
+    <div class="result-panel">
+      <div id="resultIcon" class="result-icon">★</div>
+      <h1 id="resultTitle">勝利！</h1>
+      <p id="resultText"></p>
+      <button id="newGameBtn" class="primary">再戦</button>
+      <button id="viewBoardBtn" class="secondary full">最終盤面を見る</button>
+      <button id="backHomeBtn" class="ghost full">トップへ戻る</button>
+    </div>
+  </div>
+
+  <button id="showResultBtn" class="show-result-btn hidden">結果を見る</button>
+  <div id="fxFlash" class="fx-flash hidden"></div>
 
   <div id="modal" class="modal hidden">
     <div class="modal-card">
@@ -162,6 +164,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./config.js"></script>
-<script src="./app.js?v=9"></script>
+<script src="./app.js?v=10"></script>
 </body>
 </html>

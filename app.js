@@ -55,7 +55,6 @@
 
     drawPiles: $('drawPiles'),
     actionBar: $('actionBar'),
-    selectedTileView: $('selectedTileView'),
     categorize: $('categorizeBtn'),
     compare: $('compareBtn'),
     cancelSelect: $('cancelSelectBtn'),
@@ -75,7 +74,10 @@
     resultTitle: $('resultTitle'),
     resultText: $('resultText'),
     newGame: $('newGameBtn'),
+    viewBoard: $('viewBoardBtn'),
+    showResult: $('showResultBtn'),
     backHome: $('backHomeBtn'),
+    fxFlash: $('fxFlash'),
   };
 
   let sb = null;
@@ -90,6 +92,7 @@
   let autoSkipRevision = null;
   let lastScrollKey = null;
   let lastRenderedClueCount = 0;
+  let resultDismissed = false;
 
   // 自分の手番になった／段階が変わった時に、次に触る場所（山 or 場）を画面内へ寄せる。
   function maybeAutoScrollToAction(myTurn, gameOver, eliminated) {
@@ -201,7 +204,20 @@
 
   let fxFrame = null;
 
-  function runConfetti(duration = 3200) {
+  const FX_COLORS = [
+    '#2fa46f', '#cf72b7', '#42a8c7', '#e05252', '#e59a35',
+    '#f0d26f', '#9ee6cf', '#ffffff',
+  ];
+
+  function flashScreen(className, ms) {
+    const el = els.fxFlash;
+    if (!el) return;
+    el.className = `fx-flash ${className}`;
+    setTimeout(() => el.classList.add('hidden'), ms);
+  }
+
+  // 勝利：左右の下から紙吹雪を打ち上げ、同時に上からも降らせる
+  function runVictoryFx(duration = 5000) {
     const canvas = els.fxCanvas;
     if (!canvas || !canvas.getContext) return;
 
@@ -213,33 +229,67 @@
     const H = (canvas.height = Math.floor(window.innerHeight * dpr));
 
     canvas.classList.remove('hidden');
+    flashScreen('win', 520);
 
-    const colors = ['#2fa46f', '#cf72b7', '#42a8c7', '#e05252', '#e59a35', '#f0d26f'];
-    const pieces = Array.from({ length: 130 }, () => ({
-      x: Math.random() * W,
-      y: -Math.random() * H * 0.5,
-      w: (5 + Math.random() * 7) * dpr,
-      h: (8 + Math.random() * 10) * dpr,
-      vx: (Math.random() - 0.5) * 1.8 * dpr,
-      vy: (1.5 + Math.random() * 2.8) * dpr,
+    const pick = () => FX_COLORS[Math.floor(Math.random() * FX_COLORS.length)];
+
+    const piece = (o) => ({
+      w: (5 + Math.random() * 8) * dpr,
+      h: (9 + Math.random() * 12) * dpr,
       rot: Math.random() * Math.PI,
-      vr: (Math.random() - 0.5) * 0.25,
-      color: colors[Math.floor(Math.random() * colors.length)],
-    }));
+      vr: (Math.random() - 0.5) * 0.35,
+      color: pick(),
+      gravity: 0.10 * dpr,
+      drag: 0.988,
+      recycle: false,
+      ...o,
+    });
+
+    const pieces = [];
+
+    // 上から降り続ける分
+    for (let i = 0; i < 150; i++) {
+      pieces.push(piece({
+        x: Math.random() * W,
+        y: -Math.random() * H * 0.9,
+        vx: (Math.random() - 0.5) * 1.6 * dpr,
+        vy: (1.2 + Math.random() * 2.2) * dpr,
+        gravity: 0.012 * dpr,
+        drag: 1,
+        recycle: true,
+      }));
+    }
+
+    // 左右の下隅から打ち上げる分
+    [{ x: 0, dir: 1 }, { x: W, dir: -1 }].forEach(({ x, dir }) => {
+      for (let i = 0; i < 70; i++) {
+        const angle = (Math.random() * 0.55 + 0.18) * Math.PI;
+        const speed = (10 + Math.random() * 13) * dpr;
+        pieces.push(piece({
+          x,
+          y: H,
+          vx: Math.cos(angle) * speed * dir,
+          vy: -Math.sin(angle) * speed,
+        }));
+      }
+    });
 
     const start = performance.now();
 
     const frame = now => {
       const elapsed = now - start;
       ctx.clearRect(0, 0, W, H);
-      ctx.globalAlpha = elapsed > duration - 800 ? Math.max(0, (duration - elapsed) / 800) : 1;
+      ctx.globalAlpha = elapsed > duration - 900 ? Math.max(0, (duration - elapsed) / 900) : 1;
 
       pieces.forEach(p => {
+        p.vy += p.gravity;
+        p.vx *= p.drag;
+        p.vy *= p.drag;
         p.x += p.vx;
         p.y += p.vy;
         p.rot += p.vr;
 
-        if (p.y > H + 40 * dpr) {
+        if (p.recycle && p.y > H + 40 * dpr) {
           p.y = -20 * dpr;
           p.x = Math.random() * W;
         }
@@ -248,7 +298,8 @@
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
         ctx.fillStyle = p.color;
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        // 薄い紙のように、回転で細く見える瞬間をつくる
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w * Math.abs(Math.cos(p.rot * 1.6)) + 1, p.h);
         ctx.restore();
       });
 
@@ -266,10 +317,19 @@
     fxFrame = requestAnimationFrame(frame);
   }
 
+  // 敗北：画面を赤く沈ませて、揺らす
+  function runDefeatFx() {
+    flashScreen('lose', 900);
+    document.body.classList.add('shake');
+    setTimeout(() => document.body.classList.remove('shake'), 700);
+  }
+
   function stopConfetti() {
     if (fxFrame) cancelAnimationFrame(fxFrame);
     fxFrame = null;
     if (els.fxCanvas) els.fxCanvas.classList.add('hidden');
+    if (els.fxFlash) els.fxFlash.className = 'fx-flash hidden';
+    document.body.classList.remove('shake');
   }
 
   function toggleSound() {
@@ -950,11 +1010,19 @@
   ========================= */
 
   function show(screen) {
-    [els.setup, els.waiting, els.game, els.result].forEach(
+    [els.setup, els.waiting, els.game].forEach(
       s => s.classList.add('hidden')
     );
 
     screen.classList.remove('hidden');
+
+    // 結果は画面の前面に出すオーバーレイなので、対局画面以外では必ず閉じる。
+    if (screen !== els.game) {
+      els.result.classList.add('hidden');
+      els.showResult.classList.add('hidden');
+    }
+
+    document.body.classList.toggle('in-game', screen === els.game);
 
     els.leave.classList.toggle(
       'hidden',
@@ -1000,9 +1068,10 @@
     ) {
       if (room.winner === meIndex) {
         playWinSound();
-        runConfetti();
+        runVictoryFx();
       } else {
         playLoseSound();
+        runDefeatFx();
       }
     }
 
@@ -1044,10 +1113,10 @@
 
     // 立てたコマと寝かせたコマで高さが違うので、下のコマの数字が完全に見える分だけ
     // ずらして積む。レーンの高さは一番高い山に合わせる。
-    const upHeight = compact ? 29 : 34;
-    const sideHeight = compact ? 22 : 26;
-    const upStep = compact ? 25 : 30;
-    const sideStep = compact ? 19 : 23;
+    const upHeight = compact ? 24 : 28;
+    const sideHeight = compact ? 19 : 22;
+    const upStep = compact ? 20 : 24;
+    const sideStep = compact ? 15 : 18;
     const isSideways = clue => clue.type === 'compare' && !clue.yes;
 
     let laneHeight = compact ? 32 : 38;
@@ -1275,12 +1344,15 @@
       els.gotFive.classList.add('hidden');
       renderDrawPiles(false);
 
-      els.result.classList.remove('hidden');
       renderResult();
+      els.result.classList.toggle('hidden', resultDismissed);
+      els.showResult.classList.toggle('hidden', !resultDismissed);
       return;
     }
 
+    resultDismissed = false;
     els.result.classList.add('hidden');
+    els.showResult.classList.add('hidden');
 
     if (me.eliminated) {
       els.actionBar.classList.add('hidden');
@@ -1335,11 +1407,8 @@
 
     renderDrawPiles(canDraw);
 
+    // 選んだコマは場の中で金色に縁取られるので、別枠での再掲はしない。
     els.actionBar.classList.toggle('hidden', !(canClue && selectedPublic));
-
-    if (canClue && selectedPublic) {
-      els.selectedTileView.innerHTML = tileHTML(selectedPublic);
-    }
 
     els.myHand.classList.toggle('choosing', canClue && compareMode);
 
@@ -1425,9 +1494,11 @@
       const cell = document.createElement('div');
       cell.className = `guess-cell ${color}`;
 
+      // ゲームが終わっても、ここは自分が書いたメモのまま残す。
+      // 実際の数字は真上の「自分のコマ」で公開されるので、見比べられる。
       if (gameOver) {
-        cell.classList.add('revealed');
-        cell.textContent = actualN;
+        cell.classList.add('memo-final');
+        cell.textContent = saved[pos] ? saved[pos] : '−';
         els.guessRow.appendChild(cell);
         return;
       }
@@ -2300,6 +2371,20 @@
 
   els.newGame.onclick = rematch;
   els.backHome.onclick = clearSession;
+
+  // 結果を閉じて最終盤面を確認する／もう一度結果を開く
+  els.viewBoard.onclick = () => {
+    resultDismissed = true;
+    stopConfetti();
+    els.result.classList.add('hidden');
+    els.showResult.classList.remove('hidden');
+  };
+
+  els.showResult.onclick = () => {
+    resultDismissed = false;
+    els.result.classList.remove('hidden');
+    els.showResult.classList.add('hidden');
+  };
 
   /* =========================
      Start

@@ -3,11 +3,11 @@
   --line:#463a55;--accent:#f0d26f;--accent2:#9ee6cf;--danger:#ff6b6b;
   --green:#2fa46f;--pink:#cf72b7;--blue:#42a8c7;--red:#e05252;--orange:#e59a35;
   --shadow:0 14px 40px rgba(0,0,0,.28);
-  --rack-gap:7px;
-  /* コマの並びの最大幅。ラック・差し込みレーン・数字メモ欄は
+  --rack-gap:5px;
+  /* コマの並びの最大幅。ラック・差し込みレーン・数字メモ欄・山は
      同じ幅で中央寄せにして、列の位置をぴったり揃える */
-  --own-rack-max:310px;
-  --opp-rack-max:260px;
+  --own-rack-max:250px;
+  --opp-rack-max:210px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif}
@@ -19,11 +19,18 @@ button,input{font:inherit}button{cursor:pointer}
 .top-actions{display:flex;align-items:center;gap:6px}.sound-toggle{padding:7px 9px;font-size:11px;white-space:nowrap}
 .shell{width:min(760px,100%);margin:0 auto;padding:18px 14px 60px}.screen{animation:fade .18s ease}
 
+/* 対局中は1画面に収めたいので、ヘッダーと余白を詰める */
+body.in-game .topbar{padding:7px 12px}
+body.in-game .topbar .sub{display:none}
+body.in-game .brand{font-size:15px}
+body.in-game .shell{padding:8px 10px 12px}
+body.in-game .top-actions button{padding:6px 10px;font-size:11px}
+
 .hero{padding:20px 4px 14px}.hero h1{font-size:clamp(28px,8vw,46px);line-height:1.08;margin:0 0 12px}.hero p{color:var(--muted);margin:0;line-height:1.7}
 .setup-grid{display:grid;gap:14px}
 
 .panel,.board-section{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
-.panel h2,.board-section h2{margin:0 0 12px;font-size:18px}
+.panel h2{margin:0 0 12px;font-size:18px}
 label{display:block;font-size:13px;color:var(--muted);margin:12px 0 6px}
 input{width:100%;border:1px solid var(--line);background:#16121d;color:var(--text);border-radius:12px;padding:14px 13px;outline:none}
 input:focus{border-color:var(--accent)}
@@ -33,39 +40,45 @@ button{border:0;border-radius:12px;padding:13px 15px;font-weight:800}
 .alt-primary{margin-top:8px;background:var(--accent2)}
 .secondary{background:var(--surface-2);color:var(--text);border:1px solid #5e4e70}
 .ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
-.danger{background:var(--danger);color:#1d1010}.wide,.full{width:100%}.wide{padding:16px;margin-top:16px}
+.danger{background:var(--danger);color:#1d1010}.wide,.full{width:100%}.wide{padding:11px;margin-top:7px}
 .divider{text-align:center;color:var(--muted);font-size:12px;margin:18px 0 4px}
 .notice{padding:13px 14px;border-radius:14px;margin-bottom:14px;display:grid;gap:4px}.warning{background:#3a2d16;border:1px solid #7a5d24}
 .center{text-align:center}.eyebrow{font-size:12px;color:var(--muted);letter-spacing:.18em}.room-code{font-size:46px;font-weight:950;letter-spacing:.12em;margin:10px 0}
 
-.status-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.mini-code{font-size:12px;color:var(--muted)}.turn-text{font-weight:900;margin-top:2px}
-.player-badge{font-size:13px;background:var(--surface-2);border:1px solid var(--line);padding:8px 10px;border-radius:99px}
-.board-section{margin-bottom:12px;box-shadow:none}
-.section-title-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.section-title-row h2{margin:0}.hint,.small{font-size:12px;color:var(--muted)}
-.lane-label{font-size:11px;color:var(--muted);letter-spacing:.08em;margin-top:14px}
+/* ===== 対局画面 ===== */
+.status-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.mini-code{font-size:10px;color:var(--muted)}
+.turn-text{font-weight:900;font-size:15px;margin-top:1px}
+.player-badge{font-size:11px;background:var(--surface-2);border:1px solid var(--line);padding:5px 9px;border-radius:99px}
 
-/* テーブルの向こう側＝相手、中央＝山と場、手前＝自分 という並びにする */
+.board-section{margin-bottom:5px;box-shadow:none;padding:8px;border-radius:12px}
+.board-section h2{margin:0;font-size:13px}
+.section-title-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hint,.small{font-size:11px;color:var(--muted)}
+.lane-label{font-size:10px;color:var(--muted);letter-spacing:.06em;margin-top:7px}
+
 .opponent-board{background:#1a1724}
 .opponent-board.active-turn{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .opponent-board.eliminated{opacity:.58}
 .board-section.table-center{background:#191524}
 .board-section.own-area{background:#1e1a28;border-color:#5b4a6e}
-.player-state{font-size:10px;padding:4px 7px;border-radius:99px;background:#18131f;color:var(--muted)}
+.player-state{font-size:9px;padding:3px 6px;border-radius:99px;background:#18131f;color:var(--muted)}
 .player-state.cpu{background:#28323c;color:#bfe6ff}.player-state.out{background:#402326;color:#ffb8b8}
 
 /* コマ（タイル）— 実物と同じく、盤上のコマはどれも同じ大きさにする */
-.rack{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);margin-top:10px}
-.own-area .rack,.own-area .insert-lane,.own-area .guess-row,.public-tiles{max-width:var(--own-rack-max);margin-left:auto;margin-right:auto}
+.rack{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);margin-top:6px}
+.own-area .rack,.own-area .insert-lane,.own-area .guess-row,.draw-piles{max-width:var(--own-rack-max);margin-left:auto;margin-right:auto}
+.public-tiles{max-width:calc(var(--own-rack-max) / 5 * 6 + var(--rack-gap));margin-left:auto;margin-right:auto}
 .opponent-board .rack,.opponent-board .insert-lane{max-width:var(--opp-rack-max);margin-left:auto;margin-right:auto}
-.tile{min-width:0;aspect-ratio:.9;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);border:2px solid rgba(255,255,255,.16);color:white;position:relative;user-select:none}
-.tile .num{font-weight:950;font-size:19px;line-height:1.05}
-.tile .dots{font-size:9px;letter-spacing:1.5px;margin-top:2px}
-.tile .color-name{font-size:8px;opacity:.85;margin-top:2px}
-.tile.hidden-num .num{font-size:20px}
+.tile{min-width:0;aspect-ratio:.95;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);border:2px solid rgba(255,255,255,.16);color:white;position:relative;user-select:none}
+.tile .num{font-weight:950;font-size:16px;line-height:1.05}
+.tile .dots{font-size:8px;letter-spacing:1.2px;margin-top:1px}
+.tile .color-name{font-size:7px;opacity:.8;margin-top:1px}
+.tile.hidden-num .num{font-size:17px}
 .tile.green{background:var(--green)}.tile.pink{background:var(--pink)}.tile.blue{background:var(--blue)}.tile.red{background:var(--red)}.tile.orange{background:var(--orange)}
 .opponent-rack .tile{aspect-ratio:1}
-.opponent-rack .tile .num{font-size:16px}
-.opponent-rack .tile .dots{font-size:8px;margin-top:1px}
+.opponent-rack .tile .num{font-size:13px}
+.opponent-rack .tile .dots{font-size:7px;margin-top:0}
 .opponent-rack .tile .color-name{display:none}
 
 /* 比較のとき、自分のコマを直接タップして選ぶ */
@@ -75,150 +88,201 @@ button{border:0;border-radius:12px;padding:13px 15px;font-weight:800}
 @keyframes pickGlow{0%,100%{box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 0 0 0 rgba(240,210,111,.55)}50%{box-shadow:inset 0 -3px 0 rgba(0,0,0,.18),0 0 16px 4px rgba(240,210,111,.55)}}
 
 /* 5色の山（裏向きに積まれたコマ） */
-.draw-piles{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);margin-top:8px;max-width:var(--own-rack-max);margin-left:auto;margin-right:auto}
-.draw-pile{position:relative;height:52px;border-radius:11px;border:2px solid rgba(255,255,255,.22);padding:0;display:grid;place-items:center;box-shadow:0 3px 0 rgba(0,0,0,.38),0 6px 0 rgba(0,0,0,.22)}
+.draw-piles{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);margin-top:5px}
+.draw-pile{position:relative;height:38px;border-radius:9px;border:2px solid rgba(255,255,255,.22);padding:0;display:grid;place-items:center;box-shadow:0 2px 0 rgba(0,0,0,.38),0 4px 0 rgba(0,0,0,.22)}
 .draw-pile.green{background:var(--green)}.draw-pile.pink{background:var(--pink)}.draw-pile.blue{background:var(--blue)}.draw-pile.red{background:var(--red)}.draw-pile.orange{background:var(--orange)}
-.draw-pile::after{content:"";position:absolute;inset:6px;border-radius:6px;border:1px dashed rgba(255,255,255,.4);pointer-events:none}
-.draw-pile .pile-face{font-size:17px;opacity:.5;color:#fff}
-.draw-pile .pile-count{position:absolute;right:4px;bottom:3px;font-size:10px;font-weight:900;background:rgba(0,0,0,.45);border-radius:99px;padding:1px 6px;color:#fff}
+.draw-pile::after{content:"";position:absolute;inset:4px;border-radius:5px;border:1px dashed rgba(255,255,255,.4);pointer-events:none}
+.draw-pile .pile-face{font-size:13px;opacity:.5;color:#fff}
+.draw-pile .pile-count{position:absolute;right:3px;bottom:2px;font-size:9px;font-weight:900;background:rgba(0,0,0,.45);border-radius:99px;padding:0 5px;color:#fff}
 .draw-pile.empty{opacity:.25;box-shadow:none}
 .draw-pile.ready{animation:pileGlow 1.8s ease-in-out infinite}
 .draw-pile:disabled{cursor:default}
 @keyframes pileGlow{
-  0%,100%{box-shadow:0 3px 0 rgba(0,0,0,.38),0 6px 0 rgba(0,0,0,.22),0 0 0 0 rgba(240,210,111,.5)}
-  50%{box-shadow:0 3px 0 rgba(0,0,0,.38),0 6px 0 rgba(0,0,0,.22),0 0 14px 4px rgba(240,210,111,.5)}
+  0%,100%{box-shadow:0 2px 0 rgba(0,0,0,.38),0 4px 0 rgba(0,0,0,.22),0 0 0 0 rgba(240,210,111,.5)}
+  50%{box-shadow:0 2px 0 rgba(0,0,0,.38),0 4px 0 rgba(0,0,0,.22),0 0 13px 4px rgba(240,210,111,.5)}
 }
 
 /* 場に出ているコマ（手元のコマと同じ大きさ） */
-.public-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);margin-top:8px}
-.public-tiles .tile{aspect-ratio:.9}
+.public-tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--rack-gap);margin-top:5px}
 .public-tiles .tile.selectable{cursor:pointer}
 .public-tiles .tile.selected{outline:3px solid var(--accent);outline-offset:2px}
 
-.action-bar{margin-top:14px;padding:12px;border-radius:14px;background:#221c2e;border:1px solid var(--line);display:grid;gap:10px;justify-items:center}
-.selected-tile-wrap{width:58px}
-.action-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
-.action-buttons button{padding:13px 6px;font-size:13px}
+.action-bar{margin-top:8px;padding:7px;border-radius:11px;background:#221c2e;border:1px solid var(--line)}
+.action-buttons{display:grid;grid-template-columns:1fr 1fr 34px;gap:6px}
+.action-buttons button{padding:10px 4px;font-size:12px}
+#cancelSelectBtn{padding:10px 0;font-size:14px}
 
 /* 差し込まれたコマ：ラックと同じ5列グリッド上に置き、
    分類は“隙間”の位置、比較は“そのコマの真上”に並べる */
-.insert-lane{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);align-items:end;margin-top:10px;min-height:46px}
-.insert-lane.below{align-items:start;margin-top:8px;min-height:38px}
-.insert-lane.compact{min-height:36px}
-.insert-lane.empty{display:block;min-height:0;margin-top:8px}
-.insert-empty{font-size:11px;color:var(--muted)}
+.insert-lane{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);align-items:end;margin-top:7px;min-height:32px}
+.insert-lane.below{align-items:start;margin-top:6px;min-height:28px}
+.insert-lane.compact{min-height:28px}
+.insert-lane.empty{display:block;min-height:0;margin-top:5px}
+.insert-empty{font-size:10px;color:var(--muted)}
 .insert-stack{grid-row:1;position:relative;width:0;height:100%;justify-self:center}
 /* 両端は列の外へはみ出して切れてしまわないよう、コマの半分だけ内側へ寄せる */
-.insert-stack.edge-start{justify-self:start;transform:translateX(13px)}
-.insert-stack.edge-end{justify-self:end;transform:translateX(-13px)}
+.insert-stack.edge-start{justify-self:start;transform:translateX(11px)}
+.insert-stack.edge-end{justify-self:end;transform:translateX(-11px)}
 .insert-stack.edge-between{justify-self:end;transform:translateX(calc(var(--rack-gap) / 2))}
-.insert-lane.compact .insert-stack.edge-start{transform:translateX(11px)}
-.insert-lane.compact .insert-stack.edge-end{transform:translateX(-11px)}
-.insert-chip{position:absolute;left:0;bottom:0;transform:translateX(-50%);width:26px;height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:7px;padding:2px;color:#fff;text-align:center;line-height:1.1;border:2px solid rgba(255,255,255,.5);box-shadow:0 3px 10px rgba(0,0,0,.65)}
+.insert-lane.compact .insert-stack.edge-start{transform:translateX(10px)}
+.insert-lane.compact .insert-stack.edge-end{transform:translateX(-10px)}
+.insert-chip{position:absolute;left:0;bottom:0;transform:translateX(-50%);width:22px;height:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;padding:1px;color:#fff;text-align:center;line-height:1.05;border:2px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.65)}
 .insert-lane.below .insert-chip{bottom:auto;top:0}
 .insert-chip.green{background:var(--green)}.insert-chip.pink{background:var(--pink)}.insert-chip.blue{background:var(--blue)}.insert-chip.red{background:var(--red)}.insert-chip.orange{background:var(--orange)}
-.insert-chip .chip-num{display:block;font-weight:950;font-size:12px}
-.insert-chip .chip-dots{display:block;font-size:6px;letter-spacing:1px;opacity:.9}
-.insert-chip .chip-mark{position:absolute;top:-5px;right:-5px;width:15px;height:15px;border-radius:50%;font-size:10px;font-weight:950;display:grid;place-items:center;border:1px solid rgba(0,0,0,.4)}
+.insert-chip .chip-num{display:block;font-weight:950;font-size:10px}
+.insert-chip .chip-dots{display:block;font-size:5px;letter-spacing:.5px;opacity:.9}
+.insert-chip .chip-mark{position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;font-size:9px;font-weight:950;display:grid;place-items:center;border:1px solid rgba(0,0,0,.4)}
 .insert-chip .chip-mark.same{background:var(--accent2);color:#123027}
 .insert-chip .chip-mark.diff{background:var(--danger);color:#2a0f0f}
 .insert-chip.as-gap{border-bottom-width:3px}
 .insert-chip.just-placed{animation:chipDrop .5s cubic-bezier(.2,.9,.3,1.35)}
-.insert-lane.compact .insert-chip{width:22px;height:29px;padding:1px}
-.insert-lane.compact .chip-num{font-size:10px}
-.insert-lane.compact .chip-dots{font-size:5px}
-.insert-lane.compact .chip-mark{width:13px;height:13px;font-size:8px;top:-5px;right:-5px}
+.insert-lane.compact .insert-chip{width:19px;height:24px}
+.insert-lane.compact .chip-num{font-size:9px}
+.insert-lane.compact .chip-dots{font-size:4px}
+.insert-lane.compact .chip-mark{width:12px;height:12px;font-size:8px;top:-4px;right:-4px}
 
 /* ドットが違った比較は、実物と同じようにコマを横向きに寝かせて置く */
 .insert-chip.sideways{transform:translateX(-50%) rotate(90deg)}
-.insert-chip.sideways .chip-mark{transform:rotate(-90deg);width:13px;height:13px;font-size:9px;top:-3px;right:-3px;opacity:.85}
+.insert-chip.sideways .chip-mark{transform:rotate(-90deg);width:12px;height:12px;font-size:8px;top:-3px;right:-3px;opacity:.85}
 .insert-chip.sideways.just-placed{animation:chipDropSide .5s cubic-bezier(.2,.9,.3,1.35)}
 
 @keyframes chipDrop{
-  0%{opacity:0;transform:translateX(-50%) translateY(-28px) rotate(-8deg)}
+  0%{opacity:0;transform:translateX(-50%) translateY(-26px) rotate(-8deg)}
   60%{opacity:1}
   100%{opacity:1;transform:translateX(-50%) translateY(0) rotate(0)}
 }
 @keyframes chipDropSide{
-  0%{opacity:0;transform:translateX(-50%) translateY(-28px) rotate(20deg)}
+  0%{opacity:0;transform:translateX(-50%) translateY(-26px) rotate(20deg)}
   60%{opacity:1}
   100%{opacity:1;transform:translateX(-50%) translateY(0) rotate(90deg)}
 }
 
 /* 推理した数字のメモ（自分の端末だけ） */
-.guess-row{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);margin-top:8px}
-.guess-cell{height:42px;border-radius:10px;border:2px solid var(--line);background:#16121d;display:grid;place-items:center;overflow:hidden}
+.guess-row{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--rack-gap);margin-top:5px}
+.guess-cell{height:32px;border-radius:8px;border:2px solid var(--line);background:#16121d;display:grid;place-items:center;overflow:hidden}
 .guess-cell.green{border-color:var(--green)}.guess-cell.pink{border-color:var(--pink)}.guess-cell.blue{border-color:var(--blue)}.guess-cell.red{border-color:var(--red)}.guess-cell.orange{border-color:var(--orange)}
-.guess-input{width:100%;height:100%;border:0;border-radius:0;background:transparent;text-align:center;font-weight:950;font-size:17px;padding:0;color:var(--text)}
+.guess-input{width:100%;height:100%;border:0;border-radius:0;background:transparent;text-align:center;font-weight:950;font-size:15px;padding:0;color:var(--text)}
 .guess-input:focus{outline:none;background:rgba(240,210,111,.12)}
 .guess-input.invalid{color:var(--danger)}
-.guess-cell.revealed{font-weight:950;font-size:17px;color:#fff}
-.guess-cell.revealed.green{background:var(--green)}.guess-cell.revealed.pink{background:var(--pink)}.guess-cell.revealed.blue{background:var(--blue)}.guess-cell.revealed.red{background:var(--red)}.guess-cell.revealed.orange{background:var(--orange)}
-.guess-hint{margin:8px 0 0}
+.guess-cell.memo-final{font-weight:950;font-size:15px;color:var(--muted)}
+.guess-hint{margin:5px 0 0;font-size:10px;line-height:1.4}
+body.in-game .guess-hint{display:none}
 
 /* 推理ボード */
-.deduction-grid{display:grid;gap:6px;margin-top:12px;overflow-x:hidden}.deduction-row{display:grid;grid-template-columns:14px repeat(12,minmax(0,1fr));gap:2px}
-.row-label{border-radius:5px}.row-label.green{background:var(--green)}.row-label.pink{background:var(--pink)}.row-label.blue{background:var(--blue)}.row-label.red{background:var(--red)}.row-label.orange{background:var(--orange)}
-.deduction-cell{position:relative;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:4px 1px 3px;text-align:center;color:white;line-height:1;min-width:0;cursor:pointer}
+.deduction-grid{display:grid;gap:2px;margin-top:5px;overflow-x:hidden}
+.deduction-row{display:grid;grid-template-columns:9px repeat(12,minmax(0,1fr));gap:2px}
+.row-label{border-radius:4px}
+.row-label.green{background:var(--green)}.row-label.pink{background:var(--pink)}.row-label.blue{background:var(--blue)}.row-label.red{background:var(--red)}.row-label.orange{background:var(--orange)}
+.deduction-cell{position:relative;border:1px solid rgba(255,255,255,.22);border-radius:4px;padding:1px 0;text-align:center;color:white;line-height:1;min-width:0;cursor:pointer}
 .deduction-cell.green{background:var(--green)}.deduction-cell.pink{background:var(--pink)}.deduction-cell.blue{background:var(--blue)}.deduction-cell.red{background:var(--red)}.deduction-cell.orange{background:var(--orange)}
-.cell-num{font-weight:950;font-size:10px}.cell-dots{font-size:6px;margin-top:2px}.deduction-cell.crossed{opacity:.5}
-.deduction-cell.crossed::after{content:"×";position:absolute;inset:0;display:grid;place-items:center;color:#17131f;font-size:18px;font-weight:900}
-.small-btn{padding:7px 9px;font-size:11px}
+.cell-num{font-weight:950;font-size:8px}.cell-dots{font-size:4px;margin-top:0;line-height:1}
+.deduction-cell.crossed{opacity:.5}
+.deduction-cell.crossed::after{content:"×";position:absolute;inset:0;display:grid;place-items:center;color:#17131f;font-size:15px;font-weight:900}
+.deduction-help{display:none}
+.small-btn{padding:5px 8px;font-size:10px}
 
-.got-five-button{font-size:17px;letter-spacing:.05em;box-shadow:0 8px 24px rgba(255,107,107,.25)}
+.got-five-button{font-size:16px;letter-spacing:.05em;box-shadow:0 6px 20px rgba(255,107,107,.25)}
 
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:100;display:flex;align-items:flex-end;justify-content:center}
 .modal-card{width:min(760px,100%);background:var(--surface);border:1px solid var(--line);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
 .modal-head{display:flex;justify-content:space-between;align-items:center}.modal-head h2{margin:0;font-size:18px}
-.confirm-rack{margin:14px 0}
+.confirm-rack{margin:14px 0;max-width:var(--own-rack-max);margin-left:auto;margin-right:auto}
 
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0d0b11;color:white;border:1px solid var(--line);padding:10px 14px;border-radius:12px;z-index:120;max-width:calc(100% - 30px);text-align:center}
 
-/* 勝敗の演出 */
-.fx-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:90}
-.result-panel{margin-top:20px;margin-bottom:40px;animation:resultIn .55s cubic-bezier(.18,.9,.28,1.3)}
-.result-icon{font-size:60px;line-height:1}
+/* ===== 勝敗の演出 ===== */
+.fx-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:130}
+.fx-flash{position:fixed;inset:0;pointer-events:none;z-index:125}
+.fx-flash.win{background:radial-gradient(circle at 50% 45%,rgba(255,255,255,.95),rgba(240,210,111,.5) 45%,transparent 72%);animation:flashOut .52s ease-out forwards}
+.fx-flash.lose{background:radial-gradient(circle at 50% 45%,transparent 35%,rgba(224,82,82,.55) 100%);animation:loseVignette .9s ease-out forwards}
+@keyframes flashOut{from{opacity:1}to{opacity:0}}
+@keyframes loseVignette{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+
+body.shake #app{animation:screenShake .6s cubic-bezier(.36,.07,.19,.97)}
+@keyframes screenShake{
+  0%,100%{transform:translate(0,0)}
+  10%{transform:translate(-9px,3px)}
+  25%{transform:translate(8px,-4px)}
+  40%{transform:translate(-7px,2px)}
+  55%{transform:translate(6px,3px)}
+  70%{transform:translate(-4px,-2px)}
+  85%{transform:translate(3px,1px)}
+}
+
+/* 結果は画面の前面に大きく出す */
+.result-overlay{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,8,14,.72);backdrop-filter:blur(4px);animation:fade .25s ease}
+.result-panel{position:relative;width:min(420px,100%);text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px 18px calc(18px + env(safe-area-inset-bottom));box-shadow:0 24px 70px rgba(0,0,0,.6);animation:resultIn .6s cubic-bezier(.16,.9,.26,1.35)}
+.result-panel h1{margin:6px 0 8px;font-size:34px}
+.result-panel p{color:var(--muted);margin:0 0 6px;line-height:1.6;font-size:13px}
+.result-icon{font-size:68px;line-height:1}
+.result-panel .primary{margin-top:14px}
+.result-panel .secondary,.result-panel .ghost{margin-top:8px}
 
 #resultScreen.celebrate .result-panel{
   border-color:var(--accent);
-  background:linear-gradient(180deg,#2c2413,var(--surface) 55%);
-  box-shadow:0 0 0 1px var(--accent) inset,0 18px 50px rgba(240,210,111,.22)
+  background:linear-gradient(180deg,#332a14,var(--surface) 58%);
+  box-shadow:0 0 0 2px var(--accent) inset,0 0 70px rgba(240,210,111,.45),0 24px 70px rgba(0,0,0,.6)
 }
-#resultScreen.celebrate .result-icon{animation:trophyPop 1.1s cubic-bezier(.2,.9,.3,1.4) both;filter:drop-shadow(0 0 14px rgba(240,210,111,.8))}
-#resultScreen.celebrate #resultTitle{color:var(--accent);text-shadow:0 0 20px rgba(240,210,111,.55);animation:titleGlow 2s ease-in-out infinite}
+/* 金色の光が後ろで回る */
+#resultScreen.celebrate .result-panel::before{
+  content:"";position:absolute;inset:-40%;border-radius:50%;z-index:-1;
+  background:conic-gradient(from 0deg,rgba(240,210,111,.5),transparent 25%,rgba(158,230,207,.4) 50%,transparent 75%,rgba(240,210,111,.5));
+  animation:rayspin 7s linear infinite;filter:blur(22px)
+}
+/* 広がる衝撃波 */
+#resultScreen.celebrate .result-panel::after{
+  content:"";position:absolute;left:50%;top:64px;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;
+  border:3px solid var(--accent);animation:shockwave 1.1s cubic-bezier(.2,.7,.3,1) .15s both;pointer-events:none
+}
+#resultScreen.celebrate .result-icon{animation:trophyPop 1.1s cubic-bezier(.2,.9,.3,1.4) both;filter:drop-shadow(0 0 18px rgba(240,210,111,.9))}
+#resultScreen.celebrate #resultTitle{color:var(--accent);animation:titlePop .7s cubic-bezier(.2,.9,.3,1.5) .1s both,titleGlow 1.8s ease-in-out 1s infinite}
 
-#resultScreen.defeat .result-panel{border-color:#6d3b3b;animation:resultIn .45s ease,resultShake .5s .35s both}
-#resultScreen.defeat .result-icon{color:var(--danger);opacity:.85;animation:xFall .6s cubic-bezier(.3,.8,.3,1) both}
+#resultScreen.defeat .result-panel{border-color:#8a4444;background:linear-gradient(180deg,#33191c,var(--surface) 58%);box-shadow:0 0 40px rgba(224,82,82,.28),0 24px 70px rgba(0,0,0,.6);animation:resultIn .45s ease,resultShake .55s .3s both}
+#resultScreen.defeat .result-icon{color:var(--danger);animation:xSlam .55s cubic-bezier(.3,.8,.3,1.2) both}
 #resultScreen.defeat #resultTitle{color:#ffb8b8}
 
-@keyframes resultIn{from{opacity:0;transform:translateY(22px) scale(.94)}to{opacity:1;transform:none}}
+.show-result-btn{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:120;background:var(--accent);color:#241d13;padding:11px 16px;border-radius:99px;box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:13px}
+
+@keyframes resultIn{from{opacity:0;transform:translateY(26px) scale(.88)}to{opacity:1;transform:none}}
 @keyframes resultShake{
   0%,100%{transform:translateX(0)}
-  20%{transform:translateX(-7px)}
-  40%{transform:translateX(6px)}
-  60%{transform:translateX(-4px)}
-  80%{transform:translateX(3px)}
+  20%{transform:translateX(-9px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(4px)}
 }
 @keyframes trophyPop{
-  0%{opacity:0;transform:scale(.2) rotate(-25deg)}
-  55%{opacity:1;transform:scale(1.35) rotate(8deg)}
-  75%{transform:scale(.95) rotate(-4deg)}
+  0%{opacity:0;transform:scale(.15) rotate(-35deg)}
+  50%{opacity:1;transform:scale(1.5) rotate(12deg)}
+  70%{transform:scale(.92) rotate(-6deg)}
+  85%{transform:scale(1.08) rotate(3deg)}
   100%{opacity:1;transform:scale(1) rotate(0)}
 }
-@keyframes titleGlow{0%,100%{text-shadow:0 0 14px rgba(240,210,111,.4)}50%{text-shadow:0 0 28px rgba(240,210,111,.85)}}
-@keyframes xFall{0%{opacity:0;transform:translateY(-24px) scale(1.5)}70%{opacity:.9;transform:translateY(4px) scale(.95)}100%{opacity:.85;transform:none}}
+@keyframes titlePop{0%{opacity:0;transform:scale(.4)}60%{opacity:1;transform:scale(1.25)}100%{opacity:1;transform:scale(1)}}
+@keyframes titleGlow{0%,100%{text-shadow:0 0 16px rgba(240,210,111,.45)}50%{text-shadow:0 0 34px rgba(240,210,111,.95)}}
+@keyframes rayspin{to{transform:rotate(360deg)}}
+@keyframes shockwave{0%{opacity:.9;transform:scale(.3)}100%{opacity:0;transform:scale(9)}}
+@keyframes xSlam{0%{opacity:0;transform:translateY(-40px) scale(2.2) rotate(-18deg)}70%{opacity:1;transform:translateY(6px) scale(.9) rotate(4deg)}100%{opacity:.9;transform:none}}
 
 @keyframes fade{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-@media(max-width:680px){
-  :root{--rack-gap:5px}
-  .shell{padding-left:10px;padding-right:10px}
-  .panel,.board-section{padding:12px;border-radius:15px}
-  .deduction-help{display:none}
-  .deduction-grid{gap:3px;margin-top:6px}
-  .deduction-row{grid-template-columns:10px repeat(12,minmax(0,1fr));gap:1px}
-  .deduction-cell{padding:3px 0 2px;border-radius:4px}
-  .cell-num{font-size:9px}.cell-dots{font-size:5px;margin-top:1px}
-  .draw-pile{height:48px}
+@media(max-height:720px){
+  :root{--own-rack-max:215px;--opp-rack-max:185px}
+  .tile .num{font-size:14px}.tile.hidden-num .num{font-size:15px}
+  .opponent-rack .tile .num{font-size:12px}
+  .draw-pile{height:32px}
+  .guess-cell{height:28px}.guess-input{font-size:14px}
+  .board-section{padding:7px;margin-bottom:4px}
+  .insert-lane{min-height:28px;margin-top:5px}
+  .turn-text{font-size:14px}
+  .board-section h2{font-size:12px}
+  .status-row{margin-bottom:4px}
+  .deduction-cell{padding:0}
+  .deduction-grid{gap:1px}
+  .wide{padding:9px;margin-top:6px}
+  .result-icon{font-size:54px}.result-panel h1{font-size:28px}
 }
-@media(min-width:681px){.setup-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:681px){
+  .setup-grid{grid-template-columns:1fr 1fr}
+  body.in-game .shell{padding:12px 14px 16px}
+}
