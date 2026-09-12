@@ -408,11 +408,17 @@
 
   // 旧形式(cpu2/online2/online3cpu、CPUは1体のみ)から、
   // 新形式(local/online、CPUは0〜3体まで cpuIndexes配列で保持)へ変換する。
+  // 新形式はroom作成時に必ずcpuIndexes配列を持つため、それが既にある場合は
+  // 「新形式のonline/local」であって「旧形式のonline/cpu」ではないと判断し、
+  // ここでの読み替えをスキップする(スキップしないと、CPU入りのオンライン対戦を
+  // 作った直後にcpuIndexesが[]に上書きされ、CPUの手番が永久に進まなくなる)。
   function normalizeRoom(state) {
     if (!state) return state;
 
-    if (state.mode === 'cpu') state.mode = 'cpu2';
-    if (state.mode === 'online') state.mode = 'online2';
+    const hasCpuIndexes = Array.isArray(state.cpuIndexes);
+
+    if (!hasCpuIndexes && state.mode === 'cpu') state.mode = 'cpu2';
+    if (!hasCpuIndexes && state.mode === 'online') state.mode = 'online2';
 
     state.players = (state.players || []).map(p =>
       p ? { eliminated: false, ...p } : p
