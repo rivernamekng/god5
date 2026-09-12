@@ -939,15 +939,28 @@
       stacks.get(key).push(clue);
     });
 
-    let maxStack = 1;
+    stacks.forEach(list => list.sort((a, b) => a.tile - b.tile));
+
+    // 立てたコマと寝かせたコマで高さが違うので、下のコマの数字が隠れない分だけ
+    // ずらして積む。レーンの高さは一番高い山に合わせる。
+    const upHeight = compact ? 29 : 34;
+    const sideHeight = compact ? 22 : 26;
+    const upStep = compact ? 18 : 22;
+    const sideStep = compact ? 15 : 18;
+    const isSideways = clue => clue.type === 'compare' && !clue.yes;
+
+    let laneHeight = compact ? 32 : 38;
+
     stacks.forEach(list => {
-      list.sort((a, b) => a.tile - b.tile);
-      maxStack = Math.max(maxStack, list.length);
+      let top = 0;
+      list.forEach((clue, i) => {
+        const h = isSideways(clue) ? sideHeight : upHeight;
+        if (i === list.length - 1) laneHeight = Math.max(laneHeight, top + h + 4);
+        top += isSideways(clue) ? sideStep : upStep;
+      });
     });
 
-    const step = compact ? 11 : 14;
-    const base = compact ? 30 : 38;
-    container.style.height = `${base + (maxStack - 1) * step}px`;
+    container.style.height = `${laneHeight}px`;
 
     stacks.forEach((list, key) => {
       const isGap = key[0] === 'g';
@@ -969,15 +982,22 @@
         stack.style.gridColumn = String(index + 1);
       }
 
-      list.forEach((clue, depth) => {
+      let offset = 0;
+
+      list.forEach(clue => {
         const t = tileByN(clue.tile);
         const chip = document.createElement('div');
 
+        // ドットが違った比較は、実物と同じように横向きに寝かせて置く。
+        const sideways = isSideways(clue);
+
         chip.className =
           'insert-chip ' + t.color + (isGap ? ' as-gap' : ' as-pos') +
+          (sideways ? ' sideways' : '') +
           (animateLatest && clue === latest ? ' just-placed' : '');
 
-        chip.style[below ? 'top' : 'bottom'] = `${depth * step}px`;
+        chip.style[below ? 'top' : 'bottom'] = `${offset}px`;
+        offset += sideways ? sideStep : upStep;
 
         chip.innerHTML = `
           <span class="chip-num">${clue.tile}</span>
