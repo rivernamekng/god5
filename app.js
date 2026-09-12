@@ -88,6 +88,7 @@
   let previousStatus = null;
   let autoSkipRevision = null;
   let lastScrollKey = null;
+  let lastRenderedClueCount = 0;
 
   // 固定表示の推理ボードが操作ボタン(分類/比較/GOT FIVE)を隠してしまわないよう、
   // 自分の手番になった/フェーズが変わった時に操作エリアを自動でスクロール表示する。
@@ -1254,42 +1255,100 @@
      Clues / notes
   ========================= */
 
+  // 手がかりを文章ではなく、実際に駒(タイル)が自分の5枚のどこに
+  // 入るか/どこと比べたかが分かるミニ図解として表示する。
   function renderClues() {
     const items = [...room.clues].reverse();
+    const isNewTop = room.clues.length > lastRenderedClueCount;
+    lastRenderedClueCount = room.clues.length;
 
-    els.clueLog.innerHTML =
-      items.length
-        ? ''
-        : '<div class="small">まだ手がかりはありません。</div>';
+    els.clueLog.innerHTML = '';
 
-    items.forEach(clue => {
+    if (!items.length) {
+      lastRenderedClueCount = 0;
+      els.clueLog.innerHTML = '<div class="small">まだ手がかりはありません。</div>';
+      return;
+    }
+
+    items.forEach((clue, idx) => {
       const who = room.players[clue.by]?.name || 'プレイヤー';
-      const div = document.createElement('div');
+      const t = tileByN(clue.tile);
 
-      div.className =
-        'clue-item' +
-        (clue.by === humanIndex() ? ' mine' : '');
+      const card = document.createElement('div');
+      card.className =
+        'clue-card' +
+        (clue.by === humanIndex() ? ' mine' : '') +
+        (idx === 0 && isNewTop ? ' new' : '');
+
+      const head = document.createElement('div');
+      head.className = 'clue-head';
+      head.innerHTML = `
+        <span class="clue-name">${escapeHtml(who)}</span>
+        <span class="clue-badge ${clue.type === 'compare' ? 'compare' : ''}">${clue.type === 'compare' ? '比較' : '分類'}</span>
+      `;
+      card.appendChild(head);
+
+      const track = document.createElement('div');
 
       if (clue.type === 'categorize') {
-        let text;
+        // 5枚(未公開)の間の6つの「隙間」のどこにタイルが入るかを、
+        // 実際にタイルをその隙間へ差し込む形で表示する。
+        track.className = 'clue-track';
 
-        if (clue.slot === 0) {
-          text = 'いちばん左';
-        } else if (clue.slot === 5) {
-          text = 'いちばん右';
-        } else {
-          text = `${clue.slot}番目と${clue.slot + 1}番目の間`;
+        for (let gap = 0; gap <= 5; gap++) {
+          const gapEl = document.createElement('span');
+
+          if (gap === clue.slot) {
+            gapEl.className = 'slot-gap active';
+            gapEl.innerHTML = `
+              <span class="mini-tile ${t.color}">
+                ${clue.tile}
+                <div class="mini-dots">${'●'.repeat(t.dots)}</div>
+              </span>
+            `;
+          } else {
+            gapEl.className = 'slot-gap';
+          }
+
+          track.appendChild(gapEl);
+
+          if (gap < 5) {
+            const slotEl = document.createElement('span');
+            slotEl.className = 'mini-slot';
+            track.appendChild(slotEl);
+          }
+        }
+      } else {
+        // 5枚(未公開)のうち、どの位置と比べたかをハイライトし、
+        // 実際に公開されたタイルを「=(同じ)/≠(違う)」でつなげて表示する。
+        track.className = 'clue-track compare-track';
+
+        for (let pos = 0; pos < 5; pos++) {
+          const slotEl = document.createElement('span');
+
+          if (pos === clue.pos) {
+            slotEl.className = 'mini-slot highlight';
+            slotEl.textContent = String(pos + 1);
+          } else {
+            slotEl.className = 'mini-slot';
+          }
+
+          track.appendChild(slotEl);
         }
 
-        div.textContent =
-          `${who}: ${clue.tile} は ${text}`;
+        const link = document.createElement('span');
+        link.className = `compare-link ${clue.yes ? 'same' : 'diff'}`;
+        link.textContent = clue.yes ? '=' : '≠';
+        track.appendChild(link);
 
-      } else {
-        div.textContent =
-          `${who}: ${clue.tile} のドットと自分の${clue.pos + 1}番目 → ${clue.yes ? '同じ' : '違う'}`;
+        const tileEl = document.createElement('span');
+        tileEl.className = `mini-tile ${t.color}`;
+        tileEl.innerHTML = `${clue.tile}<div class="mini-dots">${'●'.repeat(t.dots)}</div>`;
+        track.appendChild(tileEl);
       }
 
-      els.clueLog.appendChild(div);
+      card.appendChild(track);
+      els.clueLog.appendChild(card);
     });
   }
 

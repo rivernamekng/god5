@@ -54,6 +54,30 @@ button{border:0;border-radius:12px;padding:13px 15px;font-weight:800}
 
 .clue-log{display:grid;gap:8px;margin-top:12px}.clue-item{background:#19151f;border-left:4px solid var(--accent2);padding:10px 11px;border-radius:10px;font-size:13px;line-height:1.5}.clue-item.mine{border-left-color:var(--accent)}
 
+/* 手がかり: 文章ではなく、実際にタイルが自分の5枚のどこに入るか/
+   どこと比べたかを見せるミニ図解 */
+.clue-card{background:#19151f;border-left:4px solid var(--accent2);padding:10px 11px;border-radius:10px;overflow-x:auto}
+.clue-card.mine{border-left-color:var(--accent)}
+.clue-card.new{animation:clueCardIn .35s ease}
+.clue-head{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.clue-head .clue-name{font-weight:800;font-size:13px}
+.clue-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;background:#2a2333;color:var(--muted);white-space:nowrap}
+.clue-badge.compare{background:#22343d;color:#bfe6ff}
+.clue-track{display:flex;align-items:center;gap:2px;min-height:26px}
+.mini-slot{width:18px;height:24px;border-radius:5px;background:#2a2333;border:1px solid rgba(255,255,255,.16);flex:0 0 auto}
+.mini-slot.highlight{background:#3a2f1c;border-color:var(--accent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900}
+.slot-gap{width:6px;height:24px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.slot-gap.active{width:auto;padding:0 3px}
+.mini-tile{border-radius:7px;padding:3px 7px;color:#fff;font-weight:900;font-size:12px;line-height:1.2;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.35);animation:tileDrop .35s ease;flex:0 0 auto}
+.mini-tile .mini-dots{font-size:8px;letter-spacing:1px;opacity:.9;margin-top:1px}
+.mini-tile.green{background:var(--green)}.mini-tile.pink{background:var(--pink)}.mini-tile.blue{background:var(--blue)}.mini-tile.red{background:var(--red)}.mini-tile.orange{background:var(--orange)}
+.compare-track{flex-wrap:wrap;gap:5px}
+.compare-link{font-weight:950;font-size:16px;padding:0 2px}
+.compare-link.same{color:var(--accent2)}
+.compare-link.diff{color:var(--danger)}
+@keyframes tileDrop{from{opacity:0;transform:translateY(-8px) scale(.7)}to{opacity:1;transform:none}}
+@keyframes clueCardIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
 .deduction-grid{display:grid;gap:6px;margin-top:12px;overflow-x:hidden}.deduction-row{display:grid;grid-template-columns:14px repeat(12,minmax(0,1fr));gap:2px}
 .row-label{border-radius:5px}.row-label.green{background:var(--green)}.row-label.pink{background:var(--pink)}.row-label.blue{background:var(--blue)}.row-label.red{background:var(--red)}.row-label.orange{background:var(--orange)}
 .deduction-cell{position:relative;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:4px 1px 3px;text-align:center;color:white;line-height:1;min-width:0}
