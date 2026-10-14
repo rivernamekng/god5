@@ -784,15 +784,21 @@
     let code = null;
     let created = false;
 
-    for (let i = 0; i < 10 && !created; i++) {
-      code = randCode();
-      const state = buildInitialState(name, token, 'online', totalPlayers, cpuCount);
+    try {
+      for (let i = 0; i < 10 && !created; i++) {
+        code = randCode();
+        const state = buildInitialState(name, token, 'online', totalPlayers, cpuCount);
 
-      const { error } = await sb
-        .from('godfive_rooms')
-        .insert({ code, state, revision: 0 });
+        const { error } = await sb
+          .from('godfive_rooms')
+          .insert({ code, state, revision: 0 });
 
-      if (!error) created = true;
+        if (!error) created = true;
+      }
+    } catch (error) {
+      console.error(error);
+      toast('通信に失敗しました(Supabaseの設定・プロジェクトの状態をご確認ください)');
+      return;
     }
 
     if (!created) {
