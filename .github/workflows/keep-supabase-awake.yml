@@ -1,0 +1,40 @@
+name: Keep Supabase project awake
+
+# Supabaseの無料プランは7日間アクセスがないとプロジェクトを自動的に
+# 一時停止する。3日に1回、軽い読み取りリクエストを送ることで一時停止を
+# 防ぐ(オンライン対戦が「部屋を作れない」状態になるのを避けるため)。
+on:
+  schedule:
+    - cron: '0 3 */3 * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping Supabase REST endpoint
+        run: |
+          set -eu
+
+          URL=$(grep -o 'SUPABASE_URL *= *"[^"]*"' config.js | sed -E 's/.*"(.*)"/\1/')
+          KEY=$(grep -o 'SUPABASE_ANON_KEY *= *"[^"]*"' config.js | sed -E 's/.*"(.*)"/\1/')
+
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "config.js からSupabaseの接続情報を取得できませんでした" >&2
+            exit 1
+          fi
+
+          http_code=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            "$URL/rest/v1/godfive_rooms?select=code&limit=1" \
+            -H "apikey: $KEY" \
+            -H "Authorization: Bearer $KEY")
+
+          echo "HTTP status: $http_code"
+          cat /tmp/response.json
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "Supabaseへのリクエストが失敗しました(プロジェクトが一時停止中の可能性があります)" >&2
+            exit 1
+          fi

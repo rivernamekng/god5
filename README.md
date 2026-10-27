@@ -49,6 +49,16 @@ Supabaseの無料プランは、**7日間アクセスがないとプロジェク
    出ていたら、それを押して数分待つ
 3. 再開後、もう一度「この設定で部屋を作る」を試す
 
+**自動で一時停止を防ぐ仕組み(GitHub Actions)**
+
+`.github/workflows/keep-supabase-awake.yml` により、3日に1回自動で
+Supabaseへ軽い読み取りリクエストを送り、7日間アクセスなしによる自動一時
+停止を防いでいます。GitHubリポジトリの「Actions」タブから `Keep Supabase
+project awake` という名前で実行状況を確認できます(手動で今すぐ実行したい
+場合は、そのワークフローの画面で「Run workflow」からも実行できます)。
+それでも長期間誰もアクセスしないと止まることがあるので、その場合は上記の
+手動での再開手順を行ってください。
+
 ### 1. Supabase側でSQLを実行する(オンライン対戦を使う場合は必須)
 
 `supabase.sql` の内容を Supabase プロジェクトの SQL Editor で実行してください。
